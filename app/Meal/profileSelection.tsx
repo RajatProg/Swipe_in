@@ -11,6 +11,7 @@ export default function ProfileSelection() {
   const navigation = useNavigation();
   const { role } = useAuth();
 
+
   return (
     
       <View style={styles.container}>
@@ -18,6 +19,7 @@ export default function ProfileSelection() {
   
         {/* Allow only EMPLOYEE or ADMIN to access this screen */}
         {role === "EMPLOYEE" || role === "ADMIN" ? (
+          
           <View style={styles.row}>
             {/* Chick-fil-A Profile */}
             <TouchableOpacity

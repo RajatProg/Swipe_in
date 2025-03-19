@@ -135,6 +135,7 @@ async def login(user_creds: UserLogin, db: Session = Depends(get_db)):
     return {
         "access_token": access_token,
         "token_type": "bearer",
+        "firstname": user.first_name,
         "username": user.username,
         "role": user.role
     }

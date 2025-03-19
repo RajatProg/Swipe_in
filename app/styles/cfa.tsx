@@ -48,6 +48,7 @@ export const styles = StyleSheet.create({
   menuContainer: {
     flex: 7,
     padding: 10,
+    backgroundColor: '#fff'
   },
   menuGrid: {
     flexDirection: 'row',
@@ -71,7 +72,7 @@ export const styles = StyleSheet.create({
     width: 'auto',
     height: '70%',
     borderRadius: 8,
-    resizeMode: 'cover'
+    
   },
 
   
@@ -184,6 +185,48 @@ export const styles = StyleSheet.create({
 
 });
 
+
+export const headerStyles = StyleSheet.create({
+  header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    backgroundColor: '#fff',
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    borderBottomWidth: 1,
+    borderBottomColor: '#ddd',
+    paddingLeft: 10,
+  },
+  logo: {
+    width: 150,
+    height: 70,
+  },
+  greeting: {
+    flex: 1,
+    textAlign: 'center',
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#000',
+  },
+  logoutButton: {
+    backgroundColor: '#e53935',
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 15,
+  },
+  logoutText: {
+    color: '#fff',
+    fontWeight: 'bold',
+  },
+});
+
+
 export const mealStyles = StyleSheet.create({
 
   mealCard: {
@@ -247,6 +290,24 @@ export const mealStyles = StyleSheet.create({
   }
 });
 
+
+export const paymentPromptStyles = StyleSheet.create({
+  paymentOptionsContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+    marginVertical: 10,
+  },
+  paymentOption: {
+    backgroundColor: "rgba(207, 9, 9, 0.83)",
+    paddingVertical: 12,
+    paddingHorizontal: 25,
+    borderRadius: 10,
+    alignItems: "center",
+    width: '48%',   
+    marginVertical: 6,
+  },
+});
 
 export const modalStyles = StyleSheet.create({
   overlay: {

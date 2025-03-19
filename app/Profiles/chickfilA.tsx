@@ -11,12 +11,15 @@ import {
   StyleSheet,
 } from "react-native";
 import { useNavigation } from "@react-navigation/native";
-import { styles } from "../styles/cfa";
+import { mealStyles, modalStyles, styles, headerStyles, paymentPromptStyles } from "../styles/cfa";
 import { cfaImages } from "../styles/cfa_images";
-import { modalStyles } from "../styles/cfa";
-import { mealStyles } from "../styles/cfa";
 import uuid from 'react-native-uuid';
 import { useAuth } from "../AuthContext";
+
+const cfaLogo = require("../../assets/images/CFA_Logo.svg");
+
+
+
 
 
 type MenuAPIItem = {
@@ -95,10 +98,11 @@ export default function ChickfilAScreen() {
 
   // Payment states
   const [showPaymentModal, setshowPaymentModal] = useState(false);
-  const [firstname, setFirstname] = useState("");
+  const [first_name, setFirstname] = useState("");
   const [mnumber, setmnumber] = useState("");
-  const { username } = useAuth(); 
- 
+
+  const { logout, username, firstname } = useAuth();
+
   // Additional item modals
   const [showEntreeSelectModal, setShowEntreeSelectModal] = useState(false);
   const [pendingAddOn, setPendingAddOn] = useState<MenuItem | null>(null);
@@ -132,6 +136,7 @@ export default function ChickfilAScreen() {
         setError(null);
 
         const response = await fetch("http://127.0.0.1:8081/CFA_Menu/");
+        
         if (!response.ok) {
           throw new Error(`HTTP error: ${response.status}`);
         }
@@ -428,8 +433,10 @@ export default function ChickfilAScreen() {
   const renderMealUI = () => {
     return (
       <View style={{ flexDirection: "column", padding: 16 }}>
+        
         <ScrollView
           horizontal
+          showsHorizontalScrollIndicator={false}
           contentContainerStyle={{
             flexDirection: "row",
             justifyContent: "center",
@@ -555,9 +562,24 @@ export default function ChickfilAScreen() {
   };
 
   return (
-    <View style={styles.container}>
+    
+    <View style={{ flex: 1 }}>
+    
+    {/* Header */}
+    <View style={headerStyles.header}>
+      <Image source={cfaLogo} style={headerStyles.logo} resizeMode="contain" />
+      <Text style={headerStyles.greeting}>Hi { firstname || "Guest"} !</Text>
+      <TouchableOpacity style={headerStyles.logoutButton} onPress={async () => {
+          await logout();
+          navigation.navigate("Login" as never);}}>
+        <Text style={headerStyles.logoutText}>Logout</Text>
+      </TouchableOpacity>
+    </View>
+
+    {/* Main Content */}
+    <View style={{ flex: 1, flexDirection: 'row' }}>
       {/* Left Nav */}
-      <View style={styles.navColumn}>
+      <ScrollView style={styles.navColumn} showsHorizontalScrollIndicator={false}>
         {categories.map((cat) => (
           <TouchableOpacity
             key={cat}
@@ -570,9 +592,9 @@ export default function ChickfilAScreen() {
             <Text style={styles.navText}>{cat}</Text>
           </TouchableOpacity>
         ))}
-      </View>
+      </ScrollView>
 
-      {/* Middle */}
+      {/* Middle Content */}
       <View style={styles.menuContainer}>
         {loading ? (
           <ActivityIndicator size="large" color="#0000ff" />
@@ -581,60 +603,22 @@ export default function ChickfilAScreen() {
         ) : selectedCategory === "Meal" ? (
           renderMealUI()
         ) : (
-          <ScrollView
-            showsVerticalScrollIndicator={false}
-            contentContainerStyle={styles.menuGrid}
-          >
-            {menuData
-              .filter((item) => item.category === selectedCategory)
-              .map((item) => {
-                const existingCartItem = cartItems.find(
-                  (ci) => ci.id === item.id
-                );
-                const quantity = existingCartItem
-                  ? existingCartItem.quantity
-                  : 0;
-                return (
-                  <TouchableOpacity
-                    key={item.id}
-                    style={styles.card}
-                    onPress={() => {
-                      if (item.category === "Additional Items") {
-                        handleAddAdditionalItem(item);
-                      } else {
-                        handleAddItem(item);
-                      }
-                    }}
-                  >
-                    <Image
-                      source={item.image}
-                      style={styles.itemImage}
-                      resizeMode="cover"
-                    />
-                    <View style={styles.textContainer}>
-                      <Text style={styles.itemName}>{item.name}</Text>
-                      <Text style={styles.calories}>{item.calories} Cal</Text>
-                    </View>
-                    <View style={styles.bottomRow}>
-                      <Text style={styles.price}>{item.price}</Text>
-                      <TouchableOpacity
-                        style={styles.orderButton}
-                        onPress={() => {
-                          if (item.category === "Additional Items") {
-                            handleAddAdditionalItem(item);
-                          } else {
-                            handleAddItem(item);
-                          }
-                        }}
-                      >
-                        <Text style={styles.buttonText}>
-                          {quantity > 0 ? `${quantity}` : "Add"}
-                        </Text>
-                      </TouchableOpacity>
-                    </View>
+          <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.menuGrid}>
+            {menuData.filter((item) => item.category === selectedCategory).map((item) => (
+              <TouchableOpacity key={item.id} style={styles.card} onPress={() => handleAddItem(item)}>
+                <Image source={item.image} style={styles.itemImage} resizeMode='contain' />
+                <View style={styles.textContainer}>
+                  <Text style={styles.itemName}>{item.name}</Text>
+                  <Text style={styles.calories}>{item.calories} Cal</Text>
+                </View>
+                <View style={styles.bottomRow}>
+                  <Text style={styles.price}>{item.price}</Text>
+                  <TouchableOpacity style={styles.orderButton} onPress={() => handleAddItem(item)}>
+                    <Text style={styles.buttonText}>Add</Text>
                   </TouchableOpacity>
-                );
-              })}
+                </View>
+              </TouchableOpacity>
+            ))}
           </ScrollView>
         )}
       </View>
@@ -642,7 +626,8 @@ export default function ChickfilAScreen() {
       {/* Cart */}
       <View style={styles.cartContainer}>
         <Text style={styles.cartHeader}>Your Cart</Text>
-        <ScrollView style={styles.cartItems}>
+      
+        <ScrollView style={styles.cartItems}showsHorizontalScrollIndicator={false}>
           {cartItems.length === 0 ? (
             <Text style={styles.emptyCart}>Your cart is empty</Text>
           ) : (
@@ -740,7 +725,7 @@ export default function ChickfilAScreen() {
                 setPendingAddOn(null);
               }}
             >
-              <Text style={{ color: "red", fontWeight: "bold" }}>Cancel</Text>
+              <Text style={{ color: "red", fontWeight: "bold", padding: 18 }}>Cancel</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -750,7 +735,7 @@ export default function ChickfilAScreen() {
       <Modal
         visible={showAddOnsAfterEntree}
         transparent
-        animationType="slide"
+        animationType="fade"
         onRequestClose={handleCloseAddOnsModal}
       >
         <View style={modalStyles.overlay}>
@@ -775,7 +760,7 @@ export default function ChickfilAScreen() {
               style={{ marginTop: 12, alignSelf: "flex-end" }}
               onPress={handleCloseAddOnsModal}
             >
-              <Text style={{ color: "red", fontWeight: "bold" }}>Done</Text>
+              <Text style={{ color: "red", fontWeight: "bold", padding: 18 }}>Done</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -809,12 +794,12 @@ export default function ChickfilAScreen() {
                     style={{ marginRight: 16 }}
                     onPress={() => setShowAddOnQuantityModal(false)}
                   >
-                    <Text style={{ color: "red", fontWeight: "bold" }}>
+                    <Text style={{ color: "red", fontWeight: "bold", padding: 18 }}>
                       Cancel
                     </Text>
                   </TouchableOpacity>
                   <TouchableOpacity onPress={handleConfirmAddOnQuantity}>
-                    <Text style={{ color: "green", fontWeight: "bold" }}>
+                    <Text style={{ color: "green", fontWeight: "bold", padding: 18  }}>
                       Confirm
                     </Text>
                   </TouchableOpacity>
@@ -866,7 +851,7 @@ export default function ChickfilAScreen() {
               style={{ marginTop: 12, alignSelf: "flex-end" }}
               onPress={() => setShowMealPickModal(false)}
             >
-              <Text style={{ color: "red", fontWeight: "bold" }}>Cancel</Text>
+              <Text style={{ color: "red", fontWeight: "bold" , padding: 18}}>Cancel</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -879,18 +864,24 @@ export default function ChickfilAScreen() {
       <PaymentPrompt
         visible={showPaymentModal}
         onClose={() => {
+          
           setshowPaymentModal(false);
           setFirstname("");
           setmnumber("");
           
+          
         }}
         total={calculateTotal()}
-        firstname={firstname}
+        first_name={first_name}
         setFirstname={setFirstname}
         mnumber={mnumber}
         setmnumber={setmnumber}
         username={username || ""}
+        setCartItems={setCartItems} 
+
       />
+    </View>
+
     </View>
   );
 }
@@ -901,19 +892,23 @@ function PaymentPrompt({
   onClose,
   username,
   total,
-  firstname,
+  first_name,
   setFirstname,
   mnumber,
   setmnumber,
+  setCartItems,
+
 }: {
   visible: boolean;
   onClose: () => void;
   total: string;
-  firstname: string;
+  first_name: string;
   setFirstname: (val: string) => void;
   mnumber: string;
   setmnumber: (val: string) => void;
   username: string;
+  setCartItems: React.Dispatch<React.SetStateAction<CartItem[]>>; 
+
 }) {
   const totalNum = parseFloat(total);
   const mealPlanDisabled = totalNum > 9.5;
@@ -938,7 +933,6 @@ function PaymentPrompt({
      
      try {
       
-      window.alert("Transaction data: " + JSON.stringify(transactionData));
       const res = await fetch("http://127.0.0.1:8081/transaction/", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -950,14 +944,20 @@ function PaymentPrompt({
       }
 
       window.alert(
-        `Payment method: ${method}\nFirst Name: ${firstname}\nM Number: ${mnumber}\nTotal: $${totalNum.toFixed(
+        `Transaction successful! Payment method: ${method}, Amount: $${totalNum.toFixed(
           2
-        )}\n\nTransaction Completed.`
+        )}, First Name: ${first_name}`
       );
+
+      setCartItems([]);
     } catch (error: any) {
       window.alert("Error storing transaction: " + error.message);
     }
 
+    
+
+
+    
     onClose();
   }
 
@@ -978,7 +978,7 @@ function PaymentPrompt({
           <TextInput
             style={[modalStyles.input, { marginBottom: 12 }]}
             placeholder="Enter First Name"
-            value={firstname}
+            value={first_name}
             onChangeText={setFirstname}
             autoCapitalize="words"
           />
@@ -989,7 +989,7 @@ function PaymentPrompt({
             placeholder="e.g. M12345678"
             value={mnumber}
             onChangeText={(text) => {
-              // Force 'M' + up to 8 digits
+            
               const cleaned = text.replace(/[^0-9]/g, "");
               const formatted = "M" + cleaned.slice(0, 8);
               setmnumber(formatted);
@@ -998,65 +998,57 @@ function PaymentPrompt({
             autoCapitalize="none"
           />
 
-          <Text style={{ fontSize: 16, marginBottom: 10 }}>
-            Total: ${total}
+          <Text style={{ fontSize: 18, marginBottom: 12}}>
+            Total: $  
+            <Text style={{color:'rgb(246, 5, 5)' ,fontWeight: 'bold'}}>
+            { total}</Text>
           </Text>
 
-          {/* Payment method buttons */}
-          <TouchableOpacity
-            style={[
-              paymentPromptStyles.paymentOption,
-              mealPlanDisabled && { backgroundColor: "#ccc" },
-            ]}
-            disabled={mealPlanDisabled}
-            onPress={() => handlePayment("Meal Plan", username)}
-          >
-            <Text style={{ color: mealPlanDisabled ? "#999" : "#000" }}>
-              Meal Plan{mealPlanDisabled ? " (Disabled if > $9.50)" : ""}
-            </Text>
-          </TouchableOpacity>
+          <View style={paymentPromptStyles.paymentOptionsContainer}>
+  <TouchableOpacity
+    style={[
+      paymentPromptStyles.paymentOption,
+      mealPlanDisabled && { backgroundColor: "#ccc" },
+    ]}
+    disabled={mealPlanDisabled}
+    onPress={() => handlePayment("Meal Plan", username)}
+  >
+    <Text style={{ color: mealPlanDisabled ? "#999" : "#fff" }}>
+      Meal Plan{mealPlanDisabled ? " (Disabled if > $9.50)" : ""}
+    </Text>
+  </TouchableOpacity>
 
-          <TouchableOpacity
-            style={paymentPromptStyles.paymentOption}
-            onPress={() => handlePayment("Flex Dollars", username)}
-          >
-            <Text>Flex Dollars</Text>
-          </TouchableOpacity>
+  <TouchableOpacity
+    style={paymentPromptStyles.paymentOption}
+    onPress={() => handlePayment("Flex Dollars", username)}
+  >
+    <Text style={{ color: "#fff" }}>Flex Dollars</Text>
+  </TouchableOpacity>
 
-          <TouchableOpacity
-            style={paymentPromptStyles.paymentOption}
-            onPress={() => handlePayment("Cash", username)}
-          >
-            <Text>Cash</Text>
-          </TouchableOpacity>
+  <TouchableOpacity
+    style={paymentPromptStyles.paymentOption}
+    onPress={() => handlePayment("Cash", username)}
+  >
+    <Text style={{ color: "#fff" }}>Cash</Text>
+  </TouchableOpacity>
 
-          <TouchableOpacity
-            style={paymentPromptStyles.paymentOption}
-            onPress={() => handlePayment("Card", username)}
-          >
-            <Text>Card</Text>
-          </TouchableOpacity>
+  <TouchableOpacity
+    style={paymentPromptStyles.paymentOption}
+    onPress={() => handlePayment("Card", username)}
+  >
+    <Text style={{ color: "#fff" }}>Card</Text>
+  </TouchableOpacity>
+</View>
 
           {/* Cancel */}
           <TouchableOpacity
             style={{ marginTop: 14, alignSelf: "flex-end" }}
             onPress={onClose}
           >
-            <Text style={{ color: "red", fontWeight: "bold" }}>Cancel</Text>
+            <Text style={{ color: "red", fontWeight: "bold", padding: 18 }}>Cancel</Text>
           </TouchableOpacity>
         </View>
       </View>
     </Modal>
   );
 }
-
-const paymentPromptStyles = StyleSheet.create({
-  paymentOption: {
-    backgroundColor: "#eee",
-    marginVertical: 6,
-    paddingVertical: 10,
-    paddingHorizontal: 16,
-    borderRadius: 6,
-    alignItems: "center",
-  },
-});

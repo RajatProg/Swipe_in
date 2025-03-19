@@ -31,10 +31,13 @@ export default function Login() {
 
   const handleLoginuser = async () => {
     try {
+
+      
       
       const userRole = await login(username, password);
       if (userRole === 'STUDENT') {
         navigation.navigate('Profiles/Student' as never);
+      
       } else {
         window.alert('Please check username or password');
       }
@@ -53,6 +56,7 @@ export default function Login() {
       const userRole = await login(username, password);
       if (userRole === 'EMPLOYEE' || userRole === 'ADMIN') {
         navigation.navigate('Meal/profileSelection' as never);
+        
       } else {
         window.alert('Please check username or password');
       }
