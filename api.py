@@ -8,7 +8,7 @@ import uvicorn
 from database import engine, SessionLocal
 from pydantic import BaseModel
 import hashlib
-from models import User, Base , Menu, Transactions
+from models import User, Base , Menu, Transactions , Dining_Menu, Dining_Categories
 from typing import Optional
 from fastapi import FastAPI, HTTPException, Depends, status, Security
 from fastapi.security import HTTPAuthorizationCredentials
@@ -118,6 +118,7 @@ async def login(user_creds: UserLogin, db: Session = Depends(get_db)):
             detail="Incorrect username or password"
         )
     hashed_input = hashlib.sha256(user_creds.password.encode('utf-8')).hexdigest()
+
     if hashed_input != user.password:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -181,6 +182,30 @@ def read_menu(db: Session = Depends(get_db)):
 
 
 
+@app.get("/Dinig_Menu/")
+def read_menu(db: Session = Depends(get_db)):
+    dinig_menu = db.query(Dining_Menu).all()
+    if not dinig_menu:
+        return JSONResponse(content={"message" : "No items found"}, status_code= 404)
+    else :
+        return [
+            {
+                "menu_id": items.menu_id,
+                "item_title": items.item_title,
+                "item_detail": items.item_detail,
+                "portion": items.portion,
+                "diet": items.diet,
+                "date": items.date,
+                "calories": items.calories,
+                "category_id" : items.category_id
+            }
+            for items in dinig_menu  ]
+    
+
+
+
+
+
 @app.post("/transaction/", response_model=TransactionModel)
 async def create_transaction(transaction: TransactionModel, db: Session = Depends(get_db)):
     transaction_datetime = transaction.transaction_date
@@ -203,6 +228,9 @@ async def create_transaction(transaction: TransactionModel, db: Session = Depend
     db.commit()
     db.refresh(new_transaction)
     return new_transaction
+
+
+
 
 if __name__ == "__main__":
     uvicorn.run(

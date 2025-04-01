@@ -8,19 +8,20 @@ import {
   ActivityIndicator,
   Modal,
   TextInput,
-  StyleSheet,
 } from "react-native";
 import { useNavigation } from "@react-navigation/native";
-import { mealStyles, modalStyles, styles, headerStyles, paymentPromptStyles } from "../styles/cfa";
+import {
+  mealStyles,
+  modalStyles,
+  styles,
+  headerStyles,
+  paymentPromptStyles,
+} from "../styles/cfa";
 import { cfaImages } from "../styles/cfa_images";
-import uuid from 'react-native-uuid';
+import uuid from "react-native-uuid";
 import { useAuth } from "../AuthContext";
 
 const cfaLogo = require("../../assets/images/CFA_Logo.svg");
-
-
-
-
 
 type MenuAPIItem = {
   menu_id: number;
@@ -36,7 +37,7 @@ type MenuItem = {
   name: string;
   description: string;
   calories: number;
-  price: string; 
+  price: string;
   category: string;
   image: any;
 };
@@ -67,7 +68,6 @@ const categories = [
   "Sauces",
   "Additional Items",
 ];
-
 
 const categoryMap: Record<number, string> = {
   4: "Entree",
@@ -136,7 +136,7 @@ export default function ChickfilAScreen() {
         setError(null);
 
         const response = await fetch("http://127.0.0.1:8081/CFA_Menu/");
-        
+
         if (!response.ok) {
           throw new Error(`HTTP error: ${response.status}`);
         }
@@ -433,7 +433,6 @@ export default function ChickfilAScreen() {
   const renderMealUI = () => {
     return (
       <View style={{ flexDirection: "column", padding: 16 }}>
-        
         <ScrollView
           horizontal
           showsHorizontalScrollIndicator={false}
@@ -562,330 +561,373 @@ export default function ChickfilAScreen() {
   };
 
   return (
-    
     <View style={{ flex: 1 }}>
-    
-    {/* Header */}
-    <View style={headerStyles.header}>
-      <Image source={cfaLogo} style={headerStyles.logo} resizeMode="contain" />
-      <Text style={headerStyles.greeting}>Hi { firstname || "Guest"} !</Text>
-      <TouchableOpacity style={headerStyles.logoutButton} onPress={async () => {
-          await logout();
-          navigation.navigate("Login" as never);}}>
-        <Text style={headerStyles.logoutText}>Logout</Text>
-      </TouchableOpacity>
-    </View>
-
-    {/* Main Content */}
-    <View style={{ flex: 1, flexDirection: 'row' }}>
-      {/* Left Nav */}
-      <ScrollView style={styles.navColumn} showsHorizontalScrollIndicator={false}>
-        {categories.map((cat) => (
-          <TouchableOpacity
-            key={cat}
-            style={[
-              styles.navItem,
-              selectedCategory === cat && styles.selectedNavItem,
-            ]}
-            onPress={() => setSelectedCategory(cat)}
-          >
-            <Text style={styles.navText}>{cat}</Text>
-          </TouchableOpacity>
-        ))}
-      </ScrollView>
-
-      {/* Middle Content */}
-      <View style={styles.menuContainer}>
-        {loading ? (
-          <ActivityIndicator size="large" color="#0000ff" />
-        ) : error ? (
-          <Text style={{ color: "red", padding: 10 }}>{error}</Text>
-        ) : selectedCategory === "Meal" ? (
-          renderMealUI()
-        ) : (
-          <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.menuGrid}>
-            {menuData.filter((item) => item.category === selectedCategory).map((item) => (
-              <TouchableOpacity key={item.id} style={styles.card} onPress={() => handleAddItem(item)}>
-                <Image source={item.image} style={styles.itemImage} resizeMode='contain' />
-                <View style={styles.textContainer}>
-                  <Text style={styles.itemName}>{item.name}</Text>
-                  <Text style={styles.calories}>{item.calories} Cal</Text>
-                </View>
-                <View style={styles.bottomRow}>
-                  <Text style={styles.price}>{item.price}</Text>
-                  <TouchableOpacity style={styles.orderButton} onPress={() => handleAddItem(item)}>
-                    <Text style={styles.buttonText}>Add</Text>
-                  </TouchableOpacity>
-                </View>
-              </TouchableOpacity>
-            ))}
-          </ScrollView>
-        )}
+      {/* Header */}
+      <View style={headerStyles.header}>
+        <Image
+          source={cfaLogo}
+          style={headerStyles.logo}
+          resizeMode="contain"
+        />
+        <Text style={headerStyles.greeting}>Hi {firstname || "Guest"} !</Text>
+        <TouchableOpacity
+          style={headerStyles.logoutButton}
+          onPress={async () => {
+            await logout();
+            navigation.navigate("Login" as never);
+          }}
+        >
+          <Text style={headerStyles.logoutText}>Logout</Text>
+        </TouchableOpacity>
       </View>
 
-      {/* Cart */}
-      <View style={styles.cartContainer}>
-        <Text style={styles.cartHeader}>Your Cart</Text>
-      
-        <ScrollView style={styles.cartItems}showsHorizontalScrollIndicator={false}>
-          {cartItems.length === 0 ? (
-            <Text style={styles.emptyCart}>Your cart is empty</Text>
-          ) : (
-            cartItems.map((cItem) => (
-              <View key={cItem.id} style={styles.cartItem}>
-                <View style={styles.cartItemInfo}>
-                  <Text style={styles.cartItemName}>{cItem.name}</Text>
-                  <Text style={styles.cartItemPrice}>
-                    {cItem.quantity} x ${cItem.price.toFixed(2)}
-                  </Text>
-                  {/* Add-ons */}
-                  {cItem.addOns.length > 0 && (
-                    <View style={{ marginLeft: 10 }}>
-                      {cItem.addOns.map((ao) => (
-                        <View
-                          key={ao.id}
-                          style={{ flexDirection: "row", alignItems: "center" }}
-                        >
-                          <Text style={{ fontSize: 13 }}>
-                            + {ao.name} (x{ao.quantity}) = $
-                            {(ao.price * ao.quantity).toFixed(2)}
-                          </Text>
-                          <TouchableOpacity
-                            onPress={() => handleRemoveAddOn(cItem.id, ao.id)}
-                          >
-                            <Text style={{ color: "red", marginLeft: 8 }}>
-                              x
-                            </Text>
-                          </TouchableOpacity>
-                        </View>
-                      ))}
-                    </View>
-                  )}
-                </View>
-                <TouchableOpacity
-                  style={styles.removeButton}
-                  onPress={() => handleRemoveItem(cItem.id)}
-                >
-                  <Text style={styles.removeText}>×</Text>
-                </TouchableOpacity>
-              </View>
-            ))
-          )}
-          {cartItems.length > 0 && (
+      {/* Main Content */}
+      <View style={{ flex: 1, flexDirection: "row" }}>
+        {/* Left Nav */}
+        <ScrollView
+          style={styles.navColumn}
+          showsHorizontalScrollIndicator={false}
+        >
+          {categories.map((cat) => (
             <TouchableOpacity
-              onPress={handleClearAll}
-              style={{ marginTop: 20 }}
+              key={cat}
+              style={[
+                styles.navItem,
+                selectedCategory === cat && styles.selectedNavItem,
+              ]}
+              onPress={() => setSelectedCategory(cat)}
             >
-              <Text style={{ color: "red", fontWeight: "600" }}>Clear All</Text>
+              <Text style={styles.navText}>{cat}</Text>
             </TouchableOpacity>
-          )}
+          ))}
         </ScrollView>
 
-        <View style={styles.totalContainer}>
-          <Text style={styles.totalText}>Total: ${calculateTotal()}</Text>
-          <TouchableOpacity
-            style={styles.paymentButton}
-            onPress={handleOpenPaymentPrompt}
-            disabled={cartItems.length === 0}
-          >
-            <Text style={styles.paymentButtonText}>Proceed to Payment</Text>
-          </TouchableOpacity>
-        </View>
-      </View>
-
-      {/* ========== ENTREE SELECT MODAL ========== */}
-      <Modal
-        visible={showEntreeSelectModal}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setShowEntreeSelectModal(false)}
-      >
-        <View style={modalStyles.overlay}>
-          <View style={modalStyles.modalContainer}>
-            <Text style={{ fontWeight: "bold", marginBottom: 15 }}>
-              Select an Entree:
-            </Text>
-            {cartItems
-              .filter((c) => c.category === "Entree")
-              .map((c) => (
-                <TouchableOpacity
-                  key={c.id}
-                  style={{ paddingVertical: 8 }}
-                  onPress={() => handleChooseEntreeForAddOn(c.id)}
-                >
-                  <Text>
-                    {c.name} (Qty: {c.quantity})
-                  </Text>
-                </TouchableOpacity>
-              ))}
-            <TouchableOpacity
-              style={{ marginTop: 12, alignSelf: "flex-end" }}
-              onPress={() => {
-                setShowEntreeSelectModal(false);
-                setPendingAddOn(null);
-              }}
+        {/* Middle Content */}
+        <View style={styles.menuContainer}>
+          {loading ? (
+            <ActivityIndicator size="large" color="#0000ff" />
+          ) : error ? (
+            <Text style={{ color: "red", padding: 10 }}>{error}</Text>
+          ) : selectedCategory === "Meal" ? (
+            renderMealUI()
+          ) : (
+            <ScrollView
+              showsVerticalScrollIndicator={false}
+              contentContainerStyle={styles.menuGrid}
             >
-              <Text style={{ color: "red", fontWeight: "bold", padding: 18 }}>Cancel</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-      </Modal>
-
-      {/* ========== SHOW ADD-ONS AFTER ENTREE MODAL ========== */}
-      <Modal
-        visible={showAddOnsAfterEntree}
-        transparent
-        animationType="fade"
-        onRequestClose={handleCloseAddOnsModal}
-      >
-        <View style={modalStyles.overlay}>
-          <View style={modalStyles.modalContainer}>
-            <Text style={{ fontWeight: "bold", marginBottom: 12 }}>
-              Add-ons for your entree?
-            </Text>
-            <ScrollView style={{ maxHeight: 300 }}>
-              {additionalItems.map((addOn) => (
-                <TouchableOpacity
-                  key={addOn.id}
-                  style={{ paddingVertical: 8 }}
-                  onPress={() => handlePickAddOnPostEntree(addOn)}
-                >
-                  <Text>
-                    {addOn.name} - {addOn.price}
-                  </Text>
-                </TouchableOpacity>
-              ))}
-            </ScrollView>
-            <TouchableOpacity
-              style={{ marginTop: 12, alignSelf: "flex-end" }}
-              onPress={handleCloseAddOnsModal}
-            >
-              <Text style={{ color: "red", fontWeight: "bold", padding: 18 }}>Done</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-      </Modal>
-
-      {/* ========== ADD-ON QUANTITY MODAL ========== */}
-      <Modal
-        visible={showAddOnQuantityModal}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setShowAddOnQuantityModal(false)}
-      >
-        <View style={modalStyles.overlay}>
-          <View style={modalStyles.modalContainer}>
-            {selectedEntreeForQuantity && selectedAddOnForQuantity ? (
-              <>
-                <Text style={{ fontWeight: "bold", marginBottom: 8 }}>
-                  {`How many of ${selectedEntreeForQuantity.name} (Qty: ${selectedEntreeForQuantity.quantity}) should get ${selectedAddOnForQuantity.name}?`}
-                </Text>
-                <TextInput
-                  keyboardType="number-pad"
-                  style={modalStyles.input}
-                  placeholder={`1 to ${selectedEntreeForQuantity.quantity}`}
-                  value={addonQuantityInput}
-                  onChangeText={setAddonQuantityInput}
-                />
-                <View
-                  style={{ flexDirection: "row", justifyContent: "flex-end" }}
-                >
+              {menuData
+                .filter((item) => item.category === selectedCategory)
+                .map((item) => (
                   <TouchableOpacity
-                    style={{ marginRight: 16 }}
-                    onPress={() => setShowAddOnQuantityModal(false)}
+                    key={item.id}
+                    style={styles.card}
+                    onPress={() => handleAddItem(item)}
                   >
-                    <Text style={{ color: "red", fontWeight: "bold", padding: 18 }}>
-                      Cancel
-                    </Text>
+                    <Image
+                      source={item.image}
+                      style={styles.itemImage}
+                      resizeMode="contain"
+                    />
+                    <View style={styles.textContainer}>
+                      <Text style={styles.itemName}>{item.name}</Text>
+                      <Text style={styles.calories}>{item.calories} Cal</Text>
+                    </View>
+                    <View style={styles.bottomRow}>
+                      <Text style={styles.price}>{item.price}</Text>
+                      <TouchableOpacity
+                        style={styles.orderButton}
+                        onPress={() => handleAddItem(item)}
+                      >
+                        <Text style={styles.buttonText}>Add</Text>
+                      </TouchableOpacity>
+                    </View>
                   </TouchableOpacity>
-                  <TouchableOpacity onPress={handleConfirmAddOnQuantity}>
-                    <Text style={{ color: "green", fontWeight: "bold", padding: 18  }}>
-                      Confirm
+                ))}
+            </ScrollView>
+          )}
+        </View>
+
+        {/* Cart */}
+        <View style={styles.cartContainer}>
+          <Text style={styles.cartHeader}>Your Cart</Text>
+
+          <ScrollView
+            style={styles.cartItems}
+            showsHorizontalScrollIndicator={false}
+          >
+            {cartItems.length === 0 ? (
+              <Text style={styles.emptyCart}>Your cart is empty</Text>
+            ) : (
+              cartItems.map((cItem) => (
+                <View key={cItem.id} style={styles.cartItem}>
+                  <View style={styles.cartItemInfo}>
+                    <Text style={styles.cartItemName}>{cItem.name}</Text>
+                    <Text style={styles.cartItemPrice}>
+                      {cItem.quantity} x ${cItem.price.toFixed(2)}
                     </Text>
+                    {/* Add-ons */}
+                    {cItem.addOns.length > 0 && (
+                      <View style={{ marginLeft: 10 }}>
+                        {cItem.addOns.map((ao) => (
+                          <View
+                            key={ao.id}
+                            style={{
+                              flexDirection: "row",
+                              alignItems: "center",
+                            }}
+                          >
+                            <Text style={{ fontSize: 13 }}>
+                              + {ao.name} (x{ao.quantity}) = $
+                              {(ao.price * ao.quantity).toFixed(2)}
+                            </Text>
+                            <TouchableOpacity
+                              onPress={() => handleRemoveAddOn(cItem.id, ao.id)}
+                            >
+                              <Text style={{ color: "red", marginLeft: 8 }}>
+                                x
+                              </Text>
+                            </TouchableOpacity>
+                          </View>
+                        ))}
+                      </View>
+                    )}
+                  </View>
+                  <TouchableOpacity
+                    style={styles.removeButton}
+                    onPress={() => handleRemoveItem(cItem.id)}
+                  >
+                    <Text style={styles.removeText}>×</Text>
                   </TouchableOpacity>
                 </View>
-              </>
-            ) : (
-              <Text>Invalid state. Please close.</Text>
+              ))
             )}
-          </View>
-        </View>
-      </Modal>
+            {cartItems.length > 0 && (
+              <TouchableOpacity
+                onPress={handleClearAll}
+                style={{ marginTop: 20 }}
+              >
+                <Text style={{ color: "red", fontWeight: "600" }}>
+                  Clear All
+                </Text>
+              </TouchableOpacity>
+            )}
+          </ScrollView>
 
-      {/* ========== MEAL PICK MODAL ========== */}
-      <Modal
-        visible={showMealPickModal}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setShowMealPickModal(false)}
-      >
-        <View style={modalStyles.overlay}>
-          <View style={modalStyles.modalContainer}>
-            <Text style={{ fontWeight: "bold", marginBottom: 8 }}>
-              Select an Item
-            </Text>
-            <ScrollView style={{ maxHeight: 300 }}>
-              {getMealPickList().map((mItem) => (
-                <TouchableOpacity
-                  key={mItem.id}
-                  style={{
-                    flexDirection: "row",
-                    alignItems: "center",
-                    marginBottom: 18,
-                  }}
-                  onPress={() => handleSelectMealItem(mItem)}
-                >
-                  <Image
-                    source={mItem.image}
-                    style={{ width: 40, height: 40, marginRight: 8 }}
-                    resizeMode="cover"
-                  />
-                  <View>
-                    <Text style={{ fontWeight: "500" }}>{mItem.name}</Text>
-                    <Text style={{ color: "#666" }}>{mItem.price}</Text>
-                  </View>
-                </TouchableOpacity>
-              ))}
-            </ScrollView>
+          <View style={styles.totalContainer}>
+            <Text style={styles.totalText}>Total: ${calculateTotal()}</Text>
             <TouchableOpacity
-              style={{ marginTop: 12, alignSelf: "flex-end" }}
-              onPress={() => setShowMealPickModal(false)}
+              style={styles.paymentButton}
+              onPress={handleOpenPaymentPrompt}
+              disabled={cartItems.length === 0}
             >
-              <Text style={{ color: "red", fontWeight: "bold" , padding: 18}}>Cancel</Text>
+              <Text style={styles.paymentButtonText}>Proceed to Payment</Text>
             </TouchableOpacity>
           </View>
         </View>
-      </Modal>
 
-      {/* ========= CUSTOM PAYMENT PROMPT ========= */}
+        {/* ========== ENTREE SELECT MODAL ========== */}
+        <Modal
+          visible={showEntreeSelectModal}
+          transparent
+          animationType="fade"
+          onRequestClose={() => setShowEntreeSelectModal(false)}
+        >
+          <View style={modalStyles.overlay}>
+            <View style={modalStyles.modalContainer}>
+              <Text style={{ fontWeight: "bold", marginBottom: 15 }}>
+                Select an Entree:
+              </Text>
+              {cartItems
+                .filter((c) => c.category === "Entree")
+                .map((c) => (
+                  <TouchableOpacity
+                    key={c.id}
+                    style={{ paddingVertical: 8 }}
+                    onPress={() => handleChooseEntreeForAddOn(c.id)}
+                  >
+                    <Text>
+                      {c.name} (Qty: {c.quantity})
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              <TouchableOpacity
+                style={{ marginTop: 12, alignSelf: "flex-end" }}
+                onPress={() => {
+                  setShowEntreeSelectModal(false);
+                  setPendingAddOn(null);
+                }}
+              >
+                <Text style={{ color: "red", fontWeight: "bold", padding: 18 }}>
+                  Cancel
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </Modal>
 
+        {/* ========== SHOW ADD-ONS AFTER ENTREE MODAL ========== */}
+        <Modal
+          visible={showAddOnsAfterEntree}
+          transparent
+          animationType="fade"
+          onRequestClose={handleCloseAddOnsModal}
+        >
+          <View style={modalStyles.overlay}>
+            <View style={modalStyles.modalContainer}>
+              <Text style={{ fontWeight: "bold", marginBottom: 12 }}>
+                Add-ons for your entree?
+              </Text>
+              <ScrollView style={{ maxHeight: 300 }}>
+                {additionalItems.map((addOn) => (
+                  <TouchableOpacity
+                    key={addOn.id}
+                    style={{ paddingVertical: 8 }}
+                    onPress={() => handlePickAddOnPostEntree(addOn)}
+                  >
+                    <Text>
+                      {addOn.name} - {addOn.price}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
+              <TouchableOpacity
+                style={{ marginTop: 12, alignSelf: "flex-end" }}
+                onPress={handleCloseAddOnsModal}
+              >
+                <Text style={{ color: "red", fontWeight: "bold", padding: 18 }}>
+                  Done
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </Modal>
 
-      
-      <PaymentPrompt
-        visible={showPaymentModal}
-        onClose={() => {
-          
-          setshowPaymentModal(false);
-          setFirstname("");
-          setmnumber("");
-          
-          
-        }}
-        total={calculateTotal()}
-        first_name={first_name}
-        setFirstname={setFirstname}
-        mnumber={mnumber}
-        setmnumber={setmnumber}
-        username={username || ""}
-        setCartItems={setCartItems} 
+        {/* ========== ADD-ON QUANTITY MODAL ========== */}
+        <Modal
+          visible={showAddOnQuantityModal}
+          transparent
+          animationType="fade"
+          onRequestClose={() => setShowAddOnQuantityModal(false)}
+        >
+          <View style={modalStyles.overlay}>
+            <View style={modalStyles.modalContainer}>
+              {selectedEntreeForQuantity && selectedAddOnForQuantity ? (
+                <>
+                  <Text style={{ fontWeight: "bold", marginBottom: 8 }}>
+                    {`How many of ${selectedEntreeForQuantity.name} (Qty: ${selectedEntreeForQuantity.quantity}) should get ${selectedAddOnForQuantity.name}?`}
+                  </Text>
+                  <TextInput
+                    keyboardType="number-pad"
+                    style={modalStyles.input}
+                    placeholder={`1 to ${selectedEntreeForQuantity.quantity}`}
+                    value={addonQuantityInput}
+                    onChangeText={setAddonQuantityInput}
+                  />
+                  <View
+                    style={{ flexDirection: "row", justifyContent: "flex-end" }}
+                  >
+                    <TouchableOpacity
+                      style={{ marginRight: 16 }}
+                      onPress={() => setShowAddOnQuantityModal(false)}
+                    >
+                      <Text
+                        style={{
+                          color: "red",
+                          fontWeight: "bold",
+                          padding: 18,
+                        }}
+                      >
+                        Cancel
+                      </Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity onPress={handleConfirmAddOnQuantity}>
+                      <Text
+                        style={{
+                          color: "green",
+                          fontWeight: "bold",
+                          padding: 18,
+                        }}
+                      >
+                        Confirm
+                      </Text>
+                    </TouchableOpacity>
+                  </View>
+                </>
+              ) : (
+                <Text>Invalid state. Please close.</Text>
+              )}
+            </View>
+          </View>
+        </Modal>
 
-      />
-    </View>
+        {/* ========== MEAL PICK MODAL ========== */}
+        <Modal
+          visible={showMealPickModal}
+          transparent
+          animationType="fade"
+          onRequestClose={() => setShowMealPickModal(false)}
+        >
+          <View style={modalStyles.overlay}>
+            <View style={modalStyles.modalContainer}>
+              <Text style={{ fontWeight: "bold", marginBottom: 8 }}>
+                Select an Item
+              </Text>
+              <ScrollView style={{ maxHeight: 300 }}>
+                {getMealPickList().map((mItem) => (
+                  <TouchableOpacity
+                    key={mItem.id}
+                    style={{
+                      flexDirection: "row",
+                      alignItems: "center",
+                      marginBottom: 18,
+                    }}
+                    onPress={() => handleSelectMealItem(mItem)}
+                  >
+                    <Image
+                      source={mItem.image}
+                      style={{ width: 40, height: 40, marginRight: 8 }}
+                      resizeMode="cover"
+                    />
+                    <View>
+                      <Text style={{ fontWeight: "500" }}>{mItem.name}</Text>
+                      <Text style={{ color: "#666" }}>{mItem.price}</Text>
+                    </View>
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
+              <TouchableOpacity
+                style={{ marginTop: 12, alignSelf: "flex-end" }}
+                onPress={() => setShowMealPickModal(false)}
+              >
+                <Text style={{ color: "red", fontWeight: "bold", padding: 18 }}>
+                  Cancel
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </Modal>
 
+        {/* ========= CUSTOM PAYMENT PROMPT ========= */}
+
+        <PaymentPrompt
+          visible={showPaymentModal}
+          onClose={() => {
+            setshowPaymentModal(false);
+            setFirstname("");
+            setmnumber("");
+          }}
+          total={calculateTotal()}
+          first_name={first_name}
+          setFirstname={setFirstname}
+          mnumber={mnumber}
+          setmnumber={setmnumber}
+          username={username || ""}
+          setCartItems={setCartItems}
+        />
+      </View>
     </View>
   );
 }
-
 
 function PaymentPrompt({
   visible,
@@ -897,7 +939,6 @@ function PaymentPrompt({
   mnumber,
   setmnumber,
   setCartItems,
-
 }: {
   visible: boolean;
   onClose: () => void;
@@ -907,32 +948,28 @@ function PaymentPrompt({
   mnumber: string;
   setmnumber: (val: string) => void;
   username: string;
-  setCartItems: React.Dispatch<React.SetStateAction<CartItem[]>>; 
-
+  setCartItems: React.Dispatch<React.SetStateAction<CartItem[]>>;
 }) {
   const totalNum = parseFloat(total);
   const mealPlanDisabled = totalNum > 9.5;
-  
+
   async function handlePayment(method: string, username: string) {
-    
-  if (!username) {
-    window.alert("Error: No authenticated user found.");
-    return;
-  }
-  const transactionData = {
-    username: username,
-    transaction_date: new Date().toISOString(),
-    transaction_mode: method,
-    transaction_id: uuid.v4(),
-    is_successful: true,
-    Location: "Chick-fil-A",
-    Total_Amount: totalNum,
-    MNumber: mnumber 
-  };
-  
-     
-     try {
-      
+    if (!username) {
+      window.alert("Error: No authenticated user found.");
+      return;
+    }
+    const transactionData = {
+      username: username,
+      transaction_date: new Date().toISOString(),
+      transaction_mode: method,
+      transaction_id: uuid.v4(),
+      is_successful: true,
+      Location: "Chick-fil-A",
+      Total_Amount: totalNum,
+      MNumber: mnumber,
+    };
+
+    try {
       const res = await fetch("http://127.0.0.1:8081/transaction/", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -954,10 +991,6 @@ function PaymentPrompt({
       window.alert("Error storing transaction: " + error.message);
     }
 
-    
-
-
-    
     onClose();
   }
 
@@ -989,7 +1022,6 @@ function PaymentPrompt({
             placeholder="e.g. M12345678"
             value={mnumber}
             onChangeText={(text) => {
-            
               const cleaned = text.replace(/[^0-9]/g, "");
               const formatted = "M" + cleaned.slice(0, 8);
               setmnumber(formatted);
@@ -998,54 +1030,57 @@ function PaymentPrompt({
             autoCapitalize="none"
           />
 
-          <Text style={{ fontSize: 18, marginBottom: 12}}>
-            Total: $  
-            <Text style={{color:'rgb(246, 5, 5)' ,fontWeight: 'bold'}}>
-            { total}</Text>
+          <Text style={{ fontSize: 18, marginBottom: 12 }}>
+            Total: $
+            <Text style={{ color: "rgb(246, 5, 5)", fontWeight: "bold" }}>
+              {total}
+            </Text>
           </Text>
 
           <View style={paymentPromptStyles.paymentOptionsContainer}>
-  <TouchableOpacity
-    style={[
-      paymentPromptStyles.paymentOption,
-      mealPlanDisabled && { backgroundColor: "#ccc" },
-    ]}
-    disabled={mealPlanDisabled}
-    onPress={() => handlePayment("Meal Plan", username)}
-  >
-    <Text style={{ color: mealPlanDisabled ? "#999" : "#fff" }}>
-      Meal Plan{mealPlanDisabled ? " (Disabled if > $9.50)" : ""}
-    </Text>
-  </TouchableOpacity>
+            <TouchableOpacity
+              style={[
+                paymentPromptStyles.paymentOption,
+                mealPlanDisabled && { backgroundColor: "#ccc" },
+              ]}
+              disabled={mealPlanDisabled}
+              onPress={() => handlePayment("Meal Plan", username)}
+            >
+              <Text style={{ color: mealPlanDisabled ? "#999" : "#fff" }}>
+                Meal Plan{mealPlanDisabled ? " (Disabled if > $9.50)" : ""}
+              </Text>
+            </TouchableOpacity>
 
-  <TouchableOpacity
-    style={paymentPromptStyles.paymentOption}
-    onPress={() => handlePayment("Flex Dollars", username)}
-  >
-    <Text style={{ color: "#fff" }}>Flex Dollars</Text>
-  </TouchableOpacity>
+            <TouchableOpacity
+              style={paymentPromptStyles.paymentOption}
+              onPress={() => handlePayment("Flex Dollars", username)}
+            >
+              <Text style={{ color: "#fff" }}>Flex Dollars</Text>
+            </TouchableOpacity>
 
-  <TouchableOpacity
-    style={paymentPromptStyles.paymentOption}
-    onPress={() => handlePayment("Cash", username)}
-  >
-    <Text style={{ color: "#fff" }}>Cash</Text>
-  </TouchableOpacity>
+            <TouchableOpacity
+              style={paymentPromptStyles.paymentOption}
+              onPress={() => handlePayment("Cash", username)}
+            >
+              <Text style={{ color: "#fff" }}>Cash</Text>
+            </TouchableOpacity>
 
-  <TouchableOpacity
-    style={paymentPromptStyles.paymentOption}
-    onPress={() => handlePayment("Card", username)}
-  >
-    <Text style={{ color: "#fff" }}>Card</Text>
-  </TouchableOpacity>
-</View>
+            <TouchableOpacity
+              style={paymentPromptStyles.paymentOption}
+              onPress={() => handlePayment("Card", username)}
+            >
+              <Text style={{ color: "#fff" }}>Card</Text>
+            </TouchableOpacity>
+          </View>
 
           {/* Cancel */}
           <TouchableOpacity
             style={{ marginTop: 14, alignSelf: "flex-end" }}
             onPress={onClose}
           >
-            <Text style={{ color: "red", fontWeight: "bold", padding: 18 }}>Cancel</Text>
+            <Text style={{ color: "red", fontWeight: "bold", padding: 18 }}>
+              Cancel
+            </Text>
           </TouchableOpacity>
         </View>
       </View>

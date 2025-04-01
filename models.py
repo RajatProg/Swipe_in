@@ -105,3 +105,41 @@ class Employee(Base):
 
 
     user = relationship("User", back_populates="employee")
+
+
+class Dining_Menu(Base):
+    __tablename__ = 'Dining_menu'
+
+    menu_id = Column(Integer, primary_key=True, autoincrement=True)
+    item_title = Column(String(100), nullable=False)
+    item_detail = Column(String(255))
+    portion = Column(String(50))
+    diet = Column(String(50))
+    date = Column(DateTime, nullable=False)
+    calories = Column(Integer)
+    category_id = Column(Integer, ForeignKey('Dining_categories.category_id'), nullable=False)
+
+    dining_category = relationship("Dining_Categories", back_populates="dining_menus")
+
+
+class Dining_Categories(Base):
+    __tablename__ = 'Dining_categories'
+
+    category_id = Column(Integer, primary_key=True, autoincrement=True)
+    category_name = Column(String(100))
+    main_category_id = Column(Integer, ForeignKey('Dining_categories_main.main_category_id'), nullable=False)
+
+    dining_categories_main = relationship("Dining_Categories_Main", back_populates="dining_categories")
+
+    dining_menus = relationship("Dining_Menu", back_populates="dining_category")
+
+
+class Dining_Categories_Main(Base):
+    __tablename__ = 'Dining_categories_main'
+
+    main_category_id = Column(Integer, primary_key=True, autoincrement=True)
+    main_category_name = Column(String(100))
+    location = Column(String(100))
+
+
+    dining_categories = relationship("Dining_Categories", back_populates="dining_categories_main")

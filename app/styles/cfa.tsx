@@ -330,3 +330,7 @@ export const modalStyles = StyleSheet.create({
     padding: 8
   }
 });
+
+
+
+export default { styles, headerStyles, mealStyles, paymentPromptStyles, modalStyles };

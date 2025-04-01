@@ -1,4 +1,4 @@
-export const cfaImages: Record<string, any> = {
+export  const cfaImages: Record<string, any> = {
     "Chick-fil-A® Classic Sandwich": require('../../assets/images/regular.png'),
     "Spicy Chicken Sandwich": require('../../assets/images/spicy.png'),
     "Spicy Deluxe Sandwich": require('../../assets/images/spicy_deluxe.png'),
@@ -48,3 +48,7 @@ export const cfaImages: Record<string, any> = {
        
     
   };
+
+
+
+  export default cfaImages;
