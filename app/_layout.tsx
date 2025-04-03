@@ -13,6 +13,7 @@ export default function RootLayout() {
         <Stack.Screen name="Meal/profileSelection" />
         <Stack.Screen name="membership" />
         <Stack.Screen name="Registration" />
+        <Stack.Screen name="Profiles/Dining" />
         <Stack.Screen name="+not-found" />
       </Stack>
     </AuthProvider>

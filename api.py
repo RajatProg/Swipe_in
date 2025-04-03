@@ -197,7 +197,8 @@ def read_menu(db: Session = Depends(get_db)):
                 "diet": items.diet,
                 "date": items.date,
                 "calories": items.calories,
-                "category_id" : items.category_id
+                "main_category": items.dining_category.dining_categories_main.main_category_name,
+                "subcategory": items.dining_category.category_name,
             }
             for items in dinig_menu  ]
     
