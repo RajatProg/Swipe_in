@@ -9,10 +9,16 @@ import {
   Image,
   Platform,
   LayoutChangeEvent,
+  Alert,
+  Modal,
+  TextInput,
 } from "react-native";
 import DateTimePicker, { DateTimePickerEvent } from "@react-native-community/datetimepicker";
 import { Picker } from "@react-native-picker/picker";
 import { useNavigation } from "@react-navigation/native";
+import { styles, modalStyles } from "../styles/dining";
+import uuid from "react-native-uuid";
+import { useAuth } from "../AuthContext";
 
 // Data shape from your DB
 type DiningAPIItem = {
@@ -48,7 +54,6 @@ const paymentMethods = [
   "Flex Dollars",
   "Employee Meal",
 ];
-const userFirstName = "John";
 
 // Create date at local noon from "YYYY-MM-DD"
 function createLocalNoonDate(dateString: string): Date {
@@ -64,11 +69,13 @@ function createLocalNoonDateForToday(): Date {
 
 export default function DiningScreen() {
   const navigation = useNavigation();
-
+  const { logout, username, firstname } = useAuth();
   const [diningData, setDiningData] = useState<DiningItem[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [first_name, setFirstname] = useState("");
 
+  // Filter states
   const [selectedCategory, setSelectedCategory] = useState("Breakfast");
   const [selectedDiet, setSelectedDiet] = useState("All");
   const [selectedDate, setSelectedDate] = useState<Date>(createLocalNoonDateForToday());
@@ -127,7 +134,7 @@ export default function DiningScreen() {
     const totalMinutes = hr * 60 + min;
     if (totalMinutes >= 7 * 60 && totalMinutes <= 10 * 60) {
       setSelectedCategory("Breakfast");
-    } else if (totalMinutes >= 11 * 60 && totalMinutes <= 15 * 60) {
+    } else if (totalMinutes >= 11 * 60 && totalMinutes <= 15 * 60 + 30) {
       setSelectedCategory("Lunch");
     } else if (totalMinutes >= (16 * 60) && totalMinutes <= 22 * 60) {
       setSelectedCategory("Dinner");
@@ -199,6 +206,19 @@ export default function DiningScreen() {
   }
   const currentTimeLabel = formatCurrentTimeLabel(currentTime);
 
+   // ========== Payment Prompt Handlers ==========
+   const [showPaymentPrompt, setShowPaymentPrompt] = useState(false);
+   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<string>("");
+   const [mnumber, setmnumber] = useState("");
+   function handlePaymentMethodPress(method: string) {
+     setSelectedPaymentMethod(method);
+     setFirstname("");
+     setmnumber("");
+     setShowPaymentPrompt(true);
+   }
+ 
+  const simulatedtotal = 9.27;
+
   return (
     <View style={styles.container}>
       {/* HEADER */}
@@ -211,10 +231,13 @@ export default function DiningScreen() {
           <Text style={styles.logoText}>Mesquite Dining Hall</Text>
         </View>
         <View style={styles.greetingContainer}>
-          <Text style={styles.greetingText}>Hi {userFirstName}!</Text>
+          <Text style={styles.greetingText}>Hi {firstname || "Guest"} !</Text>
         </View>
         <View style={styles.logoutContainer}>
-          <TouchableOpacity style={styles.logoutButton} onPress={() => alert("Logging out...")}>
+          <TouchableOpacity style={styles.logoutButton} onPress={() => {
+            logout();
+            navigation.navigate("Login" as never);
+          }}>
             <Text style={styles.logoutText}>Log Out</Text>
           </TouchableOpacity>
         </View>
@@ -380,357 +403,181 @@ export default function DiningScreen() {
         <View style={[styles.rightColumn, { flex: 0.3 }]}>
           <Text style={styles.rightColumnHeader}>Payment Methods</Text>
           {paymentMethods.map((method) => (
-            <TouchableOpacity key={method} style={styles.paymentMethodItem}>
+            <TouchableOpacity onPress={() => handlePaymentMethodPress(method)} key={method} style={styles.paymentMethodItem}>
               <Text style={styles.paymentMethodText}>{method}</Text>
             </TouchableOpacity>
           ))}
         </View>
       </View>
+
+      {/* Payment Prompt Modal */}
+      {showPaymentPrompt && (
+        <PaymentPrompt
+          visible={showPaymentPrompt}
+          onClose={() => {
+            setShowPaymentPrompt(false);
+            setFirstname("");
+            setmnumber("");
+          }}
+          method={selectedPaymentMethod}
+          total={simulatedtotal.toString()}
+          first_name={first_name}
+          setFirstname={setFirstname}
+          mnumber={mnumber}
+          username={username || ""}
+          setmnumber={setmnumber}
+        />
+      )}
     </View>
   );
 }
 
-// ------------- STYLES -------------
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: "#f5f5f5",
-  },
-  // HEADER
-  headerContainer: {
-    position: "absolute",
-    top: 0,
-    left: 0,
-    right: 0,
-    height: 80,
-    backgroundColor: "#ffffff",
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: "#e0e0e0",
-    zIndex: 20,
-  },
-  logoContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-  },
-  logo: {
-    width: 40,
-    height: 40,
-    resizeMode: "contain",
-    marginRight: 8,
-  },
-  logoText: {
-    fontSize: 18,
-    fontWeight: "bold",
-    color: "#333",
-  },
-  greetingContainer: {
-    flex: 1,
-    alignItems: "center",
-  },
-  greetingText: {
-    fontSize: 18,
-    color: "#333",
-  },
-  logoutContainer: {
-    alignItems: "center",
-  },
-  logoutButton: {
-    backgroundColor: "#ff3b30",
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-    borderRadius: 6,
-  },
-  logoutText: {
-    color: "#fff",
-    fontSize: 16,
-    fontWeight: "600",
-  },
-  // BANNER
-  bannerContainer: {
-    position: "absolute",
-    top: 80,
-    left: 0,
-    right: 0,
-    height: 52,
-    backgroundColor: "#880000",
-    alignItems: "center",
-    justifyContent: "center",
-    zIndex: 19,
-  },
-  bannerText: {
-    color: "#fff",
-    fontSize: 18,
-    fontWeight: "bold",
-  },
 
-  // MAIN COLUMN
-  mainColumn: {
-    marginLeft: 0,
-    marginRight: 0,
-    paddingHorizontal: 16,
-    paddingVertical: 20,
-  },
-  topCard: {
-    backgroundColor: "#ffffff",
-    padding: 16,
-    borderRadius: 12,
-    marginBottom: 16,
-    elevation: 2,
-    shadowColor: "#000",
-    shadowOpacity: 0.05,
-    shadowRadius: 4,
-  },
-  categoriesRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-  },
-  categoryButton: {
-    flex: 1,
-    marginHorizontal: 4,
-    paddingVertical: 10,
-    backgroundColor: "#ffffff",
-    borderWidth: 1,
-    borderColor: "#e0e0e0",
-    borderRadius: 12,
-    alignItems: "center",
-  },
-  categoryButtonSelected: {
-    backgroundColor: "maroon",
-    borderColor: "maroon",
-  },
-  categoryButtonText: {
-    fontSize: 16,
-    color: "#333",
-  },
-  categoryButtonTextSelected: {
-    color: "#ffffff",
-  },
 
-  // TIMELINE + DATE ROW
-  timelineDateRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    marginBottom: 16,
-  },
-  dateContainer: {
-    flexDirection: "column",
-    alignItems: "flex-start",
-    marginLeft: 10,
-    marginTop: 30,
-    marginRight: 10,
-  },
-  dateLabel: {
-    fontSize: 14,
-    color: "#333",
-    marginBottom: 4,
-  },
-  dateInputWeb: {
-    padding: 4,
-    fontSize: 14,
-    borderWidth: 1,
-    borderColor: "#e0e0e0",
-    borderRadius: 6,
-  },
-  dateButton: {
-    backgroundColor: "#007AFF",
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-    borderRadius: 6,
-  },
-  dateButtonText: {
-    color: "#fff",
-    fontSize: 14,
-    fontWeight: "600",
-  },
+// ----- PaymentPrompt Component -----
+function PaymentPrompt({
+  visible,
+  onClose,
+  method,
+  username,
+  total,
+  first_name,
+  setFirstname,
+  mnumber,
+  setmnumber,
+}: {
+  visible: boolean;
+  onClose: () => void;
+  method: string;
+  total: string;
+  first_name: string;
+  setFirstname: (val: string) => void;
+  mnumber: string;
+  username: string;
+  setmnumber: (val: string) => void;
+}) {
+  // For "Meal Swipes" or "Flex Dollars", ask for MNumber; else ask for First Name.
+  const isMealPayment = method === "Meal Swipes" || method === "Flex Dollars";
+  const finalTotal = method === "Meal Swipes" 
+    ? 0 
+    : method === "Flex Dollars"
+    ? 9.27 
+    : 10;
+  const promptLabel = isMealPayment
+    ? "Please enter your Mustang Number:"
+    : "Please enter your First Name:";
 
-  // TIMELINE STYLES
-  timelineDarkBackground: {
-    backgroundColor: "transaparent", // dark row background
-    padding: 20,
-    flex: 1,
-
-    borderRadius: 12,
-  },
-  timelineLabelsRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    marginBottom: 40,
-  },
-  timelineLabel: {
-    
-    fontSize: 13,
-    color: "maroon",
-    fontWeight: "bold", // white text
-    textAlign: "center",
-  },
-  timelineTrackContainer: {
-    position: "relative",
-    height: 4,
-    backgroundColor: "transparent",
-    marginTop: 4,
-    margin: 5
-  },
-  timelineElapsed: {
-    position: "absolute",
-    left: 0,
-    top: 0,
-    height: 4,
-    backgroundColor: "black", // white portion
-  },
-  timelineRemaining: {
-    position: "absolute",
-    top: 0,
-    height: 4,
-    backgroundColor: "grey", // grey portion
-  },
-  pointerKnob: {
-    position: "absolute",
-    top: -6,
-    width: 16,
-    height: 16,
-    borderRadius: 100,
-    backgroundColor: "maroon", // blue knob
-  },
-  pointerBubble: {
-    position: "absolute",
-    bottom: 14, // above the line
-    backgroundColor: "black", // dark bubble
-    borderRadius: 14,
-    paddingHorizontal: 10,
-    paddingVertical: 3,
-  },
-  pointerBubbleText: {
-    color: "#fff",
-    fontSize: 12,
-  },
-
-  // DIET FILTER
-  pickerContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginBottom: 17,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    backgroundColor: "#ffffff",
-    borderWidth: 1,
-    borderColor: "#e0e0e0",
-    borderRadius: 12,
-    marginLeft: "auto",
-  },
-  pickerLabel: {
-    fontSize: 16,
-    marginRight: 10,
-    color: "#333",
-  },
-  picker: {
-    flex: 1,
-    height: 22,
-    borderRadius: 12,
-  },
-
-  // MENU LIST
-  menuScroll: {
-    flex: 1,
+    const handleStoreTransaction = async () => {
+      // Basic validation
+      if (!method) return;
   
-    
-  },
-  errorText: {
-    color: "red",
-    textAlign: "center",
-    marginTop: 20,
-    fontSize: 16,
-  },
-  noItemsText: {
-    textAlign: "center",
-    marginVertical: 20,
-    fontSize: 16,
-    color: "#777",
-  },
-  subcategorySection: {
-    marginBottom: 30,
-    paddingBottom: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: "#eee",
-  },
-  subcategoryHeader: {
-    fontSize: 17,
-    fontWeight: "bold",
-    color: "#333",
-    marginBottom: 12,
-  },
-  tableHeaderRow: {
-    flexDirection: "row",
-    paddingVertical: 8,
-    borderBottomWidth: 1,
-    borderBottomColor: "#ccc",
-    marginBottom: 8,
-  },
-  tableHeaderText: {
-    flex: 1,
-    fontSize: 15,
-    fontWeight: "600",
-    color: "#333",
-  },
-  tableRow: {
-    flexDirection: "row",
-    paddingVertical: 8,
-    borderBottomWidth: 1,
-    borderBottomColor: "#f0f0f0",
-    alignItems: "center",
-  },
-  tableCell: {
-    flex: 1,
-    fontSize: 14,
-    color: "#444",
-  },
-  menuItemTitle: {
-    fontSize: 15,
-    fontWeight: "400",
-    marginBottom: 4,
-    color: "#333",
-  },
-  dietText: {
-    flex:1,
-    fontSize: 14,
-    fontStyle: "italic",
-    marginBottom: 4,
-    color: "#777",
-  },
+      if (isMealPayment) {
+        if (!mnumber) {
+          window.alert("Error, Please enter your MNumber.");
+          return;
+        }
+      } else {
+        if (!first_name) {
+          window.alert("Error, Please enter your First Name.");
+          return;
+        }
+      }
+  
+   
+      const transactionData = {
+        username: username,
+        transaction_date: new Date().toISOString(),
+        transaction_mode: method,
+        transaction_id: uuid.v4(),
+        is_successful: true,
+        Location: "Mesquite Dining Hall",
+        Total_Amount: finalTotal,
+        MNumber: mnumber,
+        first_name: first_name,
+      };
+  
+      try {
+        const res = await fetch("http://127.0.0.1:8081/transaction/", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(transactionData),
+        });
+  
+        if (!res.ok) {
+          throw new Error("Transaction DB insert failed");
+        }
+        if (isMealPayment && mnumber) {
+          await handleMealPayment();
+        }
+  
+      } catch (error: any) {
+        window.alert("Error storing transaction: " + error.message);
+        return;
+      }
+  
+      onClose();
+    };
+  
+    const handleMealPayment = async () => {
+      try {
+        const paymentdata = {
+          mnumber: mnumber,
+          total: finalTotal,
+          method: method,
+        };
+  
+        const res2 = await fetch("http://127.0.0.1:8081/payments/", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(paymentdata),
+        });
+  
+        if (!res2.ok) {
+          throw new Error("Payment API call failed");
+        }
+  
+        const data2 = await res2.json();
+        console.log("Payment processed successfully:", data2);
+      } catch (error: any) {
+        window.alert("Error processing payment: " + error.message);
+      }
+    };
+return (
+    <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
+      <View style={modalStyles.overlay}>
+        <View style={modalStyles.modalContainer}>
+          <Text style={modalStyles.modalPromptLabel}>{promptLabel}</Text>
+          <TextInput
+            style={modalStyles.input}
+            placeholder={isMealPayment ? " " : "Your First Name"}
+            value={isMealPayment ? mnumber : first_name}
+            onChangeText={(text) =>{
+              const cleaned = text.replace(/[^0-9]/g, "");
+              const formatted = "M" + cleaned.slice(0, 8);
+              isMealPayment ? setmnumber(formatted) : setFirstname(text)
+            }}
+            autoCapitalize={isMealPayment ? "none" : "words"}
 
-  // RIGHT COLUMN (30%)
-  rightColumn: {
-    
-    backgroundColor: "#fafafa",
-    paddingHorizontal: 32,
-    borderLeftWidth: 1,
-    borderLeftColor: "#e0e0e0",
-  },
-  rightColumnHeader: {
-    fontWeight: "bold",
-    fontSize: 18,
-    margin: 80,
-    marginBottom: 42,
-    color: "#333",
-    textAlign: "center",
-  },
-  paymentMethodItem: {
-    
-    paddingVertical: 28,
-    marginHorizontal: 100,
-    marginBottom: 40,
-    borderRadius: 12,
-    backgroundColor: "brown",
-    borderWidth: 1,
-    borderColor: "#e0e0e0",
-  },
-  paymentMethodText: {
-    fontSize: 16,
-    textAlign: "center",
-    color: "white",
-  },
-});
+
+            
+          />
+
+          
+          <Text style={modalStyles.totalText}>
+            Total: ${finalTotal}
+          </Text>
+          <View style={modalStyles.buttonRow}>
+            <TouchableOpacity style={modalStyles.modalCancelButton} onPress={onClose}>
+              <Text style={modalStyles.modalCancelText}>Cancel</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={modalStyles.modalConfirmButton} onPress={handleStoreTransaction}>
+              <Text style={modalStyles.modalConfirmText}>Confirm</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </View>
+    </Modal>
+  );
+}
+
+

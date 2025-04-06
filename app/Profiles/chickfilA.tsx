@@ -967,6 +967,7 @@ function PaymentPrompt({
       Location: "Chick-fil-A",
       Total_Amount: totalNum,
       MNumber: mnumber,
+      first_name: first_name
     };
 
     try {
