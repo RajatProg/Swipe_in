@@ -90,7 +90,7 @@ export default function Register() {
           setPassword("");
           setConfirmPassword("");
           navigation.navigate("Login" as never);
-        }, 2000);
+        }, 1100);
       })
       .catch((error) => {
         window.alert(

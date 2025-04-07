@@ -13,12 +13,15 @@ import {
   Modal,
   TextInput,
 } from "react-native";
-import DateTimePicker, { DateTimePickerEvent } from "@react-native-community/datetimepicker";
+import DateTimePicker, {
+  DateTimePickerEvent,
+} from "@react-native-community/datetimepicker";
 import { Picker } from "@react-native-picker/picker";
 import { useNavigation } from "@react-navigation/native";
 import { styles, modalStyles } from "../styles/dining";
 import uuid from "react-native-uuid";
 import { useAuth } from "../AuthContext";
+import LottieView from "lottie-react-native";
 
 // Data shape from your DB
 type DiningAPIItem = {
@@ -27,7 +30,7 @@ type DiningAPIItem = {
   item_detail: string;
   portion: string;
   diet: string;
-  date: string; 
+  date: string;
   calories: number;
   main_category: string;
   subcategory: string;
@@ -39,7 +42,7 @@ type DiningItem = {
   detail: string;
   portion: string;
   diet: string;
-  date: string; 
+  date: string;
   calories: number;
   mainCategory: string;
   subcategory: string;
@@ -78,7 +81,9 @@ export default function DiningScreen() {
   // Filter states
   const [selectedCategory, setSelectedCategory] = useState("Breakfast");
   const [selectedDiet, setSelectedDiet] = useState("All");
-  const [selectedDate, setSelectedDate] = useState<Date>(createLocalNoonDateForToday());
+  const [selectedDate, setSelectedDate] = useState<Date>(
+    createLocalNoonDateForToday()
+  );
   const [showDatePicker, setShowDatePicker] = useState(false);
 
   const [currentTime, setCurrentTime] = useState<Date>(new Date());
@@ -96,7 +101,9 @@ export default function DiningScreen() {
         }
         const data: DiningAPIItem[] = await response.json();
         const mapped = data.map((item) => {
-          const dateStr = item.date.includes("T") ? item.date.slice(0, 10) : item.date;
+          const dateStr = item.date.includes("T")
+            ? item.date.slice(0, 10)
+            : item.date;
           return {
             id: item.menu_id,
             title: item.item_title,
@@ -136,7 +143,7 @@ export default function DiningScreen() {
       setSelectedCategory("Breakfast");
     } else if (totalMinutes >= 11 * 60 && totalMinutes <= 15 * 60 + 30) {
       setSelectedCategory("Lunch");
-    } else if (totalMinutes >= (16 * 60) && totalMinutes <= 22 * 60) {
+    } else if (totalMinutes >= 16 * 60 && totalMinutes <= 22 * 60) {
       setSelectedCategory("Dinner");
     }
   }, [currentTime]);
@@ -156,7 +163,14 @@ export default function DiningScreen() {
       setShowDatePicker(false);
     }
     if (date) {
-      const forcedNoon = new Date(date.getFullYear(), date.getMonth(), date.getDate(), 12, 0, 0);
+      const forcedNoon = new Date(
+        date.getFullYear(),
+        date.getMonth(),
+        date.getDate(),
+        12,
+        0,
+        0
+      );
       setSelectedDate(forcedNoon);
     }
   };
@@ -170,7 +184,8 @@ export default function DiningScreen() {
   // Filter Items
   const filteredItems = diningData.filter((item) => {
     const catMatch = item.mainCategory === selectedCategory;
-    const dietMatch = selectedDiet === "All" ? true : item.diet === selectedDiet;
+    const dietMatch =
+      selectedDiet === "All" ? true : item.diet === selectedDiet;
     const dateMatch = item.date === filterDateStr;
     return catMatch && dietMatch && dateMatch;
   });
@@ -206,17 +221,18 @@ export default function DiningScreen() {
   }
   const currentTimeLabel = formatCurrentTimeLabel(currentTime);
 
-   // ========== Payment Prompt Handlers ==========
-   const [showPaymentPrompt, setShowPaymentPrompt] = useState(false);
-   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<string>("");
-   const [mnumber, setmnumber] = useState("");
-   function handlePaymentMethodPress(method: string) {
-     setSelectedPaymentMethod(method);
-     setFirstname("");
-     setmnumber("");
-     setShowPaymentPrompt(true);
-   }
- 
+  // ========== Payment Prompt Handlers ==========
+  const [showPaymentPrompt, setShowPaymentPrompt] = useState(false);
+  const [selectedPaymentMethod, setSelectedPaymentMethod] =
+    useState<string>("");
+  const [mnumber, setmnumber] = useState("");
+  function handlePaymentMethodPress(method: string) {
+    setSelectedPaymentMethod(method);
+    setFirstname("");
+    setmnumber("");
+    setShowPaymentPrompt(true);
+  }
+
   const simulatedtotal = 9.27;
 
   return (
@@ -234,10 +250,13 @@ export default function DiningScreen() {
           <Text style={styles.greetingText}>Hi {firstname || "Guest"} !</Text>
         </View>
         <View style={styles.logoutContainer}>
-          <TouchableOpacity style={styles.logoutButton} onPress={() => {
-            logout();
-            navigation.navigate("Login" as never);
-          }}>
+          <TouchableOpacity
+            style={styles.logoutButton}
+            onPress={() => {
+              logout();
+              navigation.navigate("Login" as never);
+            }}
+          >
             <Text style={styles.logoutText}>Log Out</Text>
           </TouchableOpacity>
         </View>
@@ -282,7 +301,6 @@ export default function DiningScreen() {
 
           {/* TIMELINE + DATE ROW */}
           <View style={styles.timelineDateRow}>
-           
             <View style={styles.timelineDarkBackground}>
               {/* TIME LABELS (white) */}
               <View style={styles.timelineLabelsRow}>
@@ -301,14 +319,25 @@ export default function DiningScreen() {
                 }}
               >
                 {/* black portion from midnight to pointer */}
-                <View style={[styles.timelineElapsed, { width: elapsedWidth }]} />
+                <View
+                  style={[styles.timelineElapsed, { width: elapsedWidth }]}
+                />
                 {/* grey portion after pointer */}
-                <View style={[styles.timelineRemaining, { left: elapsedWidth, width: remainingWidth }]} />
+                <View
+                  style={[
+                    styles.timelineRemaining,
+                    { left: elapsedWidth, width: remainingWidth },
+                  ]}
+                />
                 {/* small circle knob on the line */}
                 <View style={[styles.pointerKnob, { left: pointerLeft - 5 }]} />
                 {/* black bubble above it with white text */}
-                <View style={[styles.pointerBubble, { left: pointerLeft - 30 }]}>
-                  <Text style={styles.pointerBubbleText}>{formatCurrentTimeLabel(currentTime)}</Text>
+                <View
+                  style={[styles.pointerBubble, { left: pointerLeft - 30 }]}
+                >
+                  <Text style={styles.pointerBubbleText}>
+                    {formatCurrentTimeLabel(currentTime)}
+                  </Text>
                 </View>
               </View>
             </View>
@@ -363,11 +392,18 @@ export default function DiningScreen() {
 
           {/* Menu Items */}
           {loading ? (
-            <ActivityIndicator size="large" color="#007AFF" style={{ marginTop: 20 }} />
+            <ActivityIndicator
+              size="large"
+              color="#007AFF"
+              style={{ marginTop: 20 }}
+            />
           ) : error ? (
             <Text style={styles.errorText}>{error}</Text>
           ) : (
-            <ScrollView style={styles.menuScroll} showsVerticalScrollIndicator={false}>
+            <ScrollView
+              style={styles.menuScroll}
+              showsVerticalScrollIndicator={false}
+            >
               {Object.keys(groupedItems).length === 0 ? (
                 <Text style={styles.noItemsText}>No items found.</Text>
               ) : (
@@ -375,7 +411,9 @@ export default function DiningScreen() {
                   <View key={subcat} style={styles.subcategorySection}>
                     <Text style={styles.subcategoryHeader}>{subcat}</Text>
                     <View style={styles.tableHeaderRow}>
-                      <Text style={[styles.tableHeaderText, { flex: 2 }]}>Menu Item</Text>
+                      <Text style={[styles.tableHeaderText, { flex: 2 }]}>
+                        Menu Item
+                      </Text>
                       <Text style={styles.tableHeaderText}></Text>
                       <Text style={styles.tableHeaderText}>Portion</Text>
                       <Text style={styles.tableHeaderText}>Calories</Text>
@@ -386,10 +424,14 @@ export default function DiningScreen() {
                           <Text style={styles.menuItemTitle}>{item.title}</Text>
                         </View>
                         {item.diet ? (
-                            <Text style={styles.dietText}>{item.diet} </Text>
-                          ) : null}
-                        <Text style={styles.tableCell}>{item.portion || "N/A"}</Text>
-                        <Text style={styles.tableCell}>{item.calories || 0} cal</Text>
+                          <Text style={styles.dietText}>{item.diet} </Text>
+                        ) : null}
+                        <Text style={styles.tableCell}>
+                          {item.portion || "N/A"}
+                        </Text>
+                        <Text style={styles.tableCell}>
+                          {item.calories || 0} cal
+                        </Text>
                       </View>
                     ))}
                   </View>
@@ -403,7 +445,11 @@ export default function DiningScreen() {
         <View style={[styles.rightColumn, { flex: 0.3 }]}>
           <Text style={styles.rightColumnHeader}>Payment Methods</Text>
           {paymentMethods.map((method) => (
-            <TouchableOpacity onPress={() => handlePaymentMethodPress(method)} key={method} style={styles.paymentMethodItem}>
+            <TouchableOpacity
+              onPress={() => handlePaymentMethodPress(method)}
+              key={method}
+              style={styles.paymentMethodItem}
+            >
               <Text style={styles.paymentMethodText}>{method}</Text>
             </TouchableOpacity>
           ))}
@@ -432,8 +478,6 @@ export default function DiningScreen() {
   );
 }
 
-
-
 // ----- PaymentPrompt Component -----
 function PaymentPrompt({
   visible,
@@ -458,126 +502,201 @@ function PaymentPrompt({
 }) {
   // For "Meal Swipes" or "Flex Dollars", ask for MNumber; else ask for First Name.
   const isMealPayment = method === "Meal Swipes" || method === "Flex Dollars";
-  const finalTotal = method === "Meal Swipes" 
-    ? 0 
-    : method === "Flex Dollars"
-    ? 9.27 
-    : 10;
+  const isMeal_Swipe = method === "Meal Swipes";
+  const isemployeeMeal = method === "Employee Meal";
+  const  finalTotal  = method === "Meal Swipes" || method === "Employee Meal"
+      ? 0.00
+      : method === "Flex Dollars"
+        ? 9.27
+        : 10.00;
   const promptLabel = isMealPayment
     ? "Please enter your Mustang Number:"
     : "Please enter your First Name:";
+  const [showSuccess, setShowSuccess] = useState(false);
+  const handleStoreTransaction = async () => {
+    // Basic validation
+    if (!method) return;
 
-    const handleStoreTransaction = async () => {
-      // Basic validation
-      if (!method) return;
-  
-      if (isMealPayment) {
-        if (!mnumber) {
-          window.alert("Error, Please enter your MNumber.");
-          return;
-        }
-      } else {
-        if (!first_name) {
-          window.alert("Error, Please enter your First Name.");
-          return;
-        }
-      }
-  
-   
-      const transactionData = {
-        username: username,
-        transaction_date: new Date().toISOString(),
-        transaction_mode: method,
-        transaction_id: uuid.v4(),
-        is_successful: true,
-        Location: "Mesquite Dining Hall",
-        Total_Amount: finalTotal,
-        MNumber: mnumber,
-        first_name: first_name,
-      };
-  
-      try {
-        const res = await fetch("http://127.0.0.1:8081/transaction/", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(transactionData),
-        });
-  
-        if (!res.ok) {
-          throw new Error("Transaction DB insert failed");
-        }
-        if (isMealPayment && mnumber) {
-          await handleMealPayment();
-        }
-  
-      } catch (error: any) {
-        window.alert("Error storing transaction: " + error.message);
+    if (isMealPayment) {
+      if (!mnumber) {
+        window.alert("Error, Please enter your MNumber.");
         return;
       }
-  
-      onClose();
-    };
-  
-    const handleMealPayment = async () => {
-      try {
-        const paymentdata = {
-          mnumber: mnumber,
-          total: finalTotal,
-          method: method,
-        };
-  
-        const res2 = await fetch("http://127.0.0.1:8081/payments/", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(paymentdata),
-        });
-  
-        if (!res2.ok) {
-          throw new Error("Payment API call failed");
-        }
-  
-        const data2 = await res2.json();
-        console.log("Payment processed successfully:", data2);
-      } catch (error: any) {
-        window.alert("Error processing payment: " + error.message);
+    } else {
+      if (!first_name) {
+        window.alert("Error, Please enter your First Name.");
+        return;
       }
+    }
+
+    const transactionData = {
+      username: username,
+      transaction_date: new Date().toISOString(),
+      transaction_mode: method,
+      transaction_id: uuid.v4(),
+      is_successful: true,
+      Location: "Mesquite Dining Hall",
+      Total_Amount: finalTotal,
+      MNumber: mnumber,
+      first_name: first_name,
     };
-return (
-    <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
-      <View style={modalStyles.overlay}>
-        <View style={modalStyles.modalContainer}>
-          <Text style={modalStyles.modalPromptLabel}>{promptLabel}</Text>
-          <TextInput
-            style={modalStyles.input}
-            placeholder={isMealPayment ? " " : "Your First Name"}
-            value={isMealPayment ? mnumber : first_name}
-            onChangeText={(text) =>{
-              const cleaned = text.replace(/[^0-9]/g, "");
-              const formatted = "M" + cleaned.slice(0, 8);
-              isMealPayment ? setmnumber(formatted) : setFirstname(text)
-            }}
-            autoCapitalize={isMealPayment ? "none" : "words"}
 
+    try {
+      const res = await fetch("http://127.0.0.1:8081/transaction/", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(transactionData),
+      });
 
-            
-          />
+      if (isMealPayment) {
+        await handleMealPayment();
+      }
+      else {
+        showSuccessAndClose();
+      }
 
+      if (!res.ok) {
+        throw new Error("Transaction DB insert failed");
+      }
+   
+    } catch (error: any) {
+      window.alert("Error storing transaction: " + error.message);
+      return;
+    }
+   
+  };
+
+  const handleMealPayment = async () => {
+    try 
+    
+    {
+      const paymentdata = {
+        mnumber: mnumber,
+        total: finalTotal,
+        method: method,
+      };
+
+      
+      const username = mnumber;
+      const swipe_res = await fetch(`http://127.0.0.1:8081/swipe/${username}`, {
+        method: "GET",
+        headers: { "Content-Type": "application/json" },
+      });
+
+      const swipe_data = await swipe_res.json();
           
-          <Text style={modalStyles.totalText}>
-            Total: ${finalTotal}
-          </Text>
-          <View style={modalStyles.buttonRow}>
-            <TouchableOpacity style={modalStyles.modalCancelButton} onPress={onClose}>
-              <Text style={modalStyles.modalCancelText}>Cancel</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={modalStyles.modalConfirmButton} onPress={handleStoreTransaction}>
-              <Text style={modalStyles.modalConfirmText}>Confirm</Text>
-            </TouchableOpacity>
+     if (!swipe_res.ok) {
+      window.alert("Mustang Number doesn't exist, please try again.");
+      return; 
+    }
+
+    
+    if (method === "Meal Swipes") {
+      if (swipe_data.meal_swipes_left == 0) {
+        window.alert("You are out of swipes. Please recharge your swipes.");
+        return; 
+      }
+    } 
+    
+    else if (method === "Flex Dollars") 
+      
+      {
+    
+      if (swipe_data.flex_dollars_left < finalTotal) {
+        window.alert("You do not have enough flex dollars. Please add more money.");
+        return; 
+      }
+
+    } 
+    
+      const res2 = await fetch("http://127.0.0.1:8081/payments/", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(paymentdata),
+      });
+
+      {res2.ok ? showSuccessAndClose() :("Error !! Payment failed.") }
+
+
+      // To verify in console
+      const data2 = await res2.json();
+      console.log("Payment processed successfully:", data2);
+    } catch (error: any) {
+      window.alert("Error processing payment: " + error.message);
+    }
+  };
+function showSuccessAndClose() {
+    setShowSuccess(true);
+    
+    setTimeout(() => {
+      setShowSuccess(false);
+      setmnumber("");
+      setFirstname("");
+      onClose();
+    }, 1100);
+  }
+
+  return (
+    <Modal
+      visible={visible}
+      transparent
+      animationType="fade"
+      onRequestClose={onClose}
+    >
+      
+          {!showSuccess ? (
+            <>
+            <View style={modalStyles.overlay}>
+            <View style={modalStyles.modalContainer}>
+              <Text style={modalStyles.modalPromptLabel}>{promptLabel}</Text>
+              <TextInput
+                style={modalStyles.input}
+                placeholder={isMealPayment ? " " : "Your First Name"}
+                value={isMealPayment ? mnumber : first_name}
+                onChangeText={(text) => {
+                  const cleaned = text.replace(/[^0-9]/g, "");
+                  const formatted = "M" + cleaned.slice(0, 8);
+                  isMealPayment ? setmnumber(formatted) : setFirstname(text);
+                }}
+                autoCapitalize={isMealPayment ? "none" : "words"}
+              />
+             {isMeal_Swipe || isemployeeMeal ? null : (<Text style={modalStyles.totalText}>Total: ${finalTotal}</Text>)}
+              
+  
+              <View style={modalStyles.buttonRow}>  
+                <TouchableOpacity
+                  style={modalStyles.modalCancelButton}
+                  onPress={onClose}
+                >
+                  <Text style={modalStyles.modalCancelText}>Cancel</Text>
+                </TouchableOpacity>
+  
+                <TouchableOpacity
+                  style={modalStyles.modalConfirmButton}
+                  onPress={handleStoreTransaction}
+                >
+                  <Text style={modalStyles.modalConfirmText}>Confirm</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
           </View>
-        </View>
-      </View>
+            </>
+          ) : (
+            <View style={styles.modalContainer2}>
+              <View style={styles.alertBox}>
+                <LottieView
+                  source={require("../../assets/images/Tick.json")}
+                  autoPlay
+                  loop={false}
+                  style={styles.animation}
+                />
+                <Text style={styles.text}>  
+                Payment Successful !! Thank you, {first_name || mnumber} !
+                </Text>
+              </View>
+            </View>
+          )}
+      
     </Modal>
   );
 }
-
-

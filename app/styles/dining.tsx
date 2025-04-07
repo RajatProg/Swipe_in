@@ -343,6 +343,37 @@ export const styles = StyleSheet.create({
       textAlign: "center",
       color: "white",
     },
+
+    
+  modalContainer2: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0, 0, 0, 0.68)'
+
+    
+  },
+  alertBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#fff',
+    padding: 95,
+    borderRadius: 22,
+    margin: 450,
+    borderColor: 'brown',
+    borderWidth: 6
+  
+  },
+  animation: {
+    width: 50,
+    height: 50,
+    marginRight: 20,
+  },
+  text: {
+    fontSize: 20,
+    flexShrink: 1
+    
+  }
   });
   
   export const modalStyles = StyleSheet.create({

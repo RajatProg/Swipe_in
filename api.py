@@ -251,6 +251,7 @@ async def process_payment(payment: PaymentRequest, db: Session = Depends(get_db)
 
     else:
         raise HTTPException(
+
             status_code=400, 
             detail="Unsupported payment method for this endpoint."
         )
@@ -262,6 +263,19 @@ async def process_payment(payment: PaymentRequest, db: Session = Depends(get_db)
         "meal_swipes_left": swipe.meal_swipes_left,
         "flex_dollars_left": swipe.flex_dollars_left,
     }
+
+@app.get("/swipe/{username}")
+async def get_swipe(username: str, db: Session = Depends(get_db)):
+    swipe = db.query(Swipes).filter(Swipes.username == username).first()
+    if not swipe:
+        raise HTTPException(status_code=404, detail="Swipe record not found.")
+    return {
+        "username": swipe.username,
+        "meal_swipes_left": swipe.meal_swipes_left,
+        "flex_dollars_left": swipe.flex_dollars_left,
+    }
+
+
 
 
 # -------------------- Transaction Endpoint --------------------
