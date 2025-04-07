@@ -20,6 +20,7 @@ import {
 import { cfaImages } from "../styles/cfa_images";
 import uuid from "react-native-uuid";
 import { useAuth } from "../AuthContext";
+import LottieView from "lottie-react-native"; // <-- same as in Dining
 
 const cfaLogo = require("../../assets/images/CFA_Logo.svg");
 
@@ -84,6 +85,7 @@ const defaultImage = require("../../assets/images/swipee.jpg");
 
 export default function ChickfilAScreen() {
   const navigation = useNavigation();
+  const { logout, username, firstname } = useAuth();
 
   // Which category is selected
   const [selectedCategory, setSelectedCategory] = useState<string>("Entree");
@@ -97,11 +99,7 @@ export default function ChickfilAScreen() {
   const [error, setError] = useState<string | null>(null);
 
   // Payment states
-  const [showPaymentModal, setshowPaymentModal] = useState(false);
-  const [first_name, setFirstname] = useState("");
-  const [mnumber, setmnumber] = useState("");
-
-  const { logout, username, firstname } = useAuth();
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
 
   // Additional item modals
   const [showEntreeSelectModal, setShowEntreeSelectModal] = useState(false);
@@ -136,10 +134,10 @@ export default function ChickfilAScreen() {
         setError(null);
 
         const response = await fetch("http://127.0.0.1:8081/CFA_Menu/");
-
         if (!response.ok) {
           throw new Error(`HTTP error: ${response.status}`);
         }
+
         const data: MenuAPIItem[] = await response.json();
 
         const mapped = data.map((item) => {
@@ -201,6 +199,7 @@ export default function ChickfilAScreen() {
   };
 
   const checkAddOnQuantity = (entree: CartItem, addOn: MenuItem) => {
+    // If there's only 1 entree, no need to ask quantity. Add the add-on to all.
     if (entree.quantity === 1) {
       addAddonToEntree(entree.id, addOn, 1);
     } else {
@@ -220,12 +219,14 @@ export default function ChickfilAScreen() {
       if (existingIndex > -1) {
         const updated = [...prev];
         updated[existingIndex].quantity += 1;
+        // If it’s an Entree, prompt for add-ons
         if (menuItem.category === "Entree") {
           setRecentEntreeId(menuItem.id);
           setShowAddOnsAfterEntree(true);
         }
         return updated;
       }
+      // If new to cart
       const newItem: CartItem = {
         id: menuItem.id,
         name: menuItem.name,
@@ -257,14 +258,17 @@ export default function ChickfilAScreen() {
   };
 
   const handleAddAdditionalItem = (menuItem: MenuItem) => {
+    // Ensure at least one entree is in the cart
     const entrees = cartItems.filter((c) => c.category === "Entree");
     if (entrees.length === 0) {
       window.alert("No Entree, Please add an entree before extras.");
       return;
     }
+    // If only one entree, skip the “select entree” modal
     if (entrees.length === 1) {
       checkAddOnQuantity(entrees[0], menuItem);
     } else {
+      // Show a modal to pick *which* entree
       setPendingAddOn(menuItem);
       setShowEntreeSelectModal(true);
     }
@@ -290,9 +294,13 @@ export default function ChickfilAScreen() {
       return;
     }
     const q = parseInt(addonQuantityInput, 10);
-    if (isNaN(q) || q < 1 || q > selectedEntreeForQuantity.quantity) {
+    if (
+      isNaN(q) ||
+      q < 1 ||
+      q > selectedEntreeForQuantity.quantity
+    ) {
       window.alert(
-        `Invalid Quantity, Please enter 1 to ${selectedEntreeForQuantity.quantity}.`
+        `Invalid quantity. Please enter an integer between 1 and ${selectedEntreeForQuantity.quantity}.`
       );
       return;
     }
@@ -306,14 +314,16 @@ export default function ChickfilAScreen() {
   const additionalItems = menuData.filter(
     (m) => m.category === "Additional Items"
   );
+
   const handlePickAddOnPostEntree = (addOn: MenuItem) => {
     const foundEntree = cartItems.find((c) => c.id === recentEntreeId);
     if (!foundEntree) {
-      window.alert("No Entree Found, No matching entree in cart.");
+      window.alert("No matching entree found.");
       return;
     }
     checkAddOnQuantity(foundEntree, addOn);
   };
+
   const handleCloseAddOnsModal = () => {
     setShowAddOnsAfterEntree(false);
     setRecentEntreeId(null);
@@ -351,6 +361,7 @@ export default function ChickfilAScreen() {
         sauceCount += cItem.quantity;
       }
     }
+    // Example sauce surcharge: first 2 free, then $0.25 each
     let surcharge = 0;
     if (sauceCount > 2) {
       surcharge = (sauceCount - 2) * 0.25;
@@ -359,7 +370,6 @@ export default function ChickfilAScreen() {
   };
 
   // ========== Meal UI ==========
-
   const allMealItemsChosen =
     mealEntree && mealSides && mealSauces && mealDrinks;
 
@@ -427,7 +437,7 @@ export default function ChickfilAScreen() {
     setMealSides(null);
     setMealSauces(null);
     setMealDrinks(null);
-    window.alert("Meal Added, Your meal items have been added to the cart.");
+    window.alert("Meal items have been added to your cart!");
   };
 
   const renderMealUI = () => {
@@ -554,21 +564,16 @@ export default function ChickfilAScreen() {
   };
 
   // Payment Prompt
-
   const handleOpenPaymentPrompt = () => {
     if (cartItems.length === 0) return;
-    setshowPaymentModal(true);
+    setShowPaymentModal(true);
   };
 
   return (
     <View style={{ flex: 1 }}>
       {/* Header */}
       <View style={headerStyles.header}>
-        <Image
-          source={cfaLogo}
-          style={headerStyles.logo}
-          resizeMode="contain"
-        />
+        <Image source={cfaLogo} style={headerStyles.logo} resizeMode="contain" />
         <Text style={headerStyles.greeting}>Hi {firstname || "Guest"} !</Text>
         <TouchableOpacity
           style={headerStyles.logoutButton}
@@ -908,19 +913,10 @@ export default function ChickfilAScreen() {
         </Modal>
 
         {/* ========= CUSTOM PAYMENT PROMPT ========= */}
-
         <PaymentPrompt
           visible={showPaymentModal}
-          onClose={() => {
-            setshowPaymentModal(false);
-            setFirstname("");
-            setmnumber("");
-          }}
+          onClose={() => setShowPaymentModal(false)}
           total={calculateTotal()}
-          first_name={first_name}
-          setFirstname={setFirstname}
-          mnumber={mnumber}
-          setmnumber={setmnumber}
           username={username || ""}
           setCartItems={setCartItems}
         />
@@ -929,162 +925,291 @@ export default function ChickfilAScreen() {
   );
 }
 
+// ===================== PaymentPrompt (Updated) =====================
 function PaymentPrompt({
   visible,
   onClose,
   username,
   total,
-  first_name,
-  setFirstname,
-  mnumber,
-  setmnumber,
   setCartItems,
 }: {
   visible: boolean;
   onClose: () => void;
   total: string;
-  first_name: string;
-  setFirstname: (val: string) => void;
-  mnumber: string;
-  setmnumber: (val: string) => void;
   username: string;
   setCartItems: React.Dispatch<React.SetStateAction<CartItem[]>>;
 }) {
+  const [first_name, setFirstname] = useState("");
+  const [mnumber, setmnumber] = useState("");
+  const [showSuccess, setShowSuccess] = useState(false);
   const totalNum = parseFloat(total);
-  const mealPlanDisabled = totalNum > 9.5;
 
-  async function handlePayment(method: string, username: string) {
-    if (!username) {
-      window.alert("Error: No authenticated user found.");
-      return;
-    }
-    const transactionData = {
-      username: username,
-      transaction_date: new Date().toISOString(),
-      transaction_mode: method,
-      transaction_id: uuid.v4(),
-      is_successful: true,
-      Location: "Chick-fil-A",
-      Total_Amount: totalNum,
-      MNumber: mnumber,
-      first_name: first_name
-    };
+  // STEP 1: Payment Method Selection
+  const [selectedMethod, setSelectedMethod] = useState<string | null>(null);
 
+  const mealSwipesDisabled = totalNum > 9.27;
+
+  const handleClose = () => {
+    setShowSuccess(false);
+    setSelectedMethod(null);
+    setFirstname("");
+    setmnumber("");
+    onClose();
+  };
+
+// =========== Step 2 Confirm Payment ===========
+const handleConfirmPayment = async () => {
+  // Basic validation
+  if (selectedMethod === "Meal Swipes" || selectedMethod === "Flex Dollars") {
     try {
-      const res = await fetch("http://127.0.0.1:8081/transaction/", {
-        method: "POST",
+      // a) Check if MNumber exists
+      const swipeRes = await fetch(`http://127.0.0.1:8081/swipe/${mnumber}`, {
+        method: "GET",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(transactionData),
       });
-
-      if (!res.ok) {
-        throw new Error("Transaction DB insert failed");
+      if (!swipeRes.ok) {
+        window.alert("Mustang Number doesn't exist, please try again.");
+        return;
+      }
+      const swipeData = await swipeRes.json();
+  
+      // b) Verify meal swipes or flex balance
+      if (selectedMethod === "Meal Swipes") {
+        if (swipeData.meal_swipes_left <= 0) {
+          window.alert("You are out of swipes. Please recharge your swipes.");
+          return;
+        }
+      } else if (selectedMethod === "Flex Dollars") {
+        if (swipeData.flex_dollars_left < totalNum) {
+          window.alert("You do not have enough flex dollars. Please add more money.");
+          return;
+        }
       }
 
-      window.alert(
-        `Transaction successful! Payment method: ${method}, Amount: $${totalNum.toFixed(
-          2
-        )}, First Name: ${first_name}`
-      );
-
-      setCartItems([]);
+      // c) Deduct: POST /payments/
+      const paymentdata = {
+        mnumber: mnumber,
+        total: totalNum,
+        method: selectedMethod,
+      };
+      const payRes = await fetch("http://127.0.0.1:8081/payments/", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(paymentdata),
+      });
+      if (!payRes.ok) {
+        window.alert("Error !! Payment failed.");
+        return;
+      }
     } catch (error: any) {
-      window.alert("Error storing transaction: " + error.message);
+      window.alert("Error processing payment: " + error.message);
+      return;
     }
-
-    onClose();
   }
+  
+  // 2) Now that we’ve passed the checks (or if Cash/Card was chosen):
+  //    INSERT the transaction record into /transaction/
+  const transactionData = {
+    username: username,
+    transaction_date: new Date().toISOString(),
+    transaction_mode: selectedMethod,
+    transaction_id: uuid.v4(),
+    is_successful: true,
+    Location: "Chick-fil-A",
+    Total_Amount: totalNum,
+    MNumber: mnumber,
+    first_name: first_name,
+  };
+  
+  try {
+    const res = await fetch("http://127.0.0.1:8081/transaction/", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(transactionData),
+    });
+    if (!res.ok) {
+      throw new Error("Transaction DB insert failed");
+    }
+  } catch (error: any) {
+    window.alert("Error storing transaction: " + error.message);
+    return;
+  }
+  
+  // 3) If we got here => everything is successful
+  showSuccessAnimation();
 
-  return (
+};
+
+function showSuccessAnimation() {
+  setShowSuccess(true);
+  setTimeout(() => {
+    setShowSuccess(false);
+    setCartItems([]);
+    setSelectedMethod(null);
+    setFirstname("");
+    setmnumber("");
+    onClose();
+  }, 1200);
+}
+
+// =========== Rendering the Modal Content ===========
+return (
     <Modal
-      visible={visible}
-      transparent
-      animationType="fade"
-      onRequestClose={onClose}
-    >
+    visible={visible}
+    transparent
+    animationType="fade"
+    onRequestClose={handleClose}
+  >
+    {!showSuccess ? (
       <View style={modalStyles.overlay}>
         <View style={modalStyles.modalContainer}>
-          <Text style={{ fontSize: 16, fontWeight: "bold", marginBottom: 10 }}>
-            Payment Prompt
-          </Text>
-
-          <Text style={{ marginBottom: 4 }}>Enter First Name:</Text>
-          <TextInput
-            style={[modalStyles.input, { marginBottom: 12 }]}
-            placeholder="Enter First Name"
-            value={first_name}
-            onChangeText={setFirstname}
-            autoCapitalize="words"
-          />
-
-          <Text style={{ marginBottom: 4 }}>Enter M Number:</Text>
-          <TextInput
-            style={[modalStyles.input, { marginBottom: 12 }]}
-            placeholder="e.g. M12345678"
-            value={mnumber}
-            onChangeText={(text) => {
-              const cleaned = text.replace(/[^0-9]/g, "");
-              const formatted = "M" + cleaned.slice(0, 8);
-              setmnumber(formatted);
-            }}
-            maxLength={9}
-            autoCapitalize="none"
-          />
-
-          <Text style={{ fontSize: 18, marginBottom: 12 }}>
-            Total: $
-            <Text style={{ color: "rgb(246, 5, 5)", fontWeight: "bold" }}>
-              {total}
-            </Text>
-          </Text>
-
-          <View style={paymentPromptStyles.paymentOptionsContainer}>
-            <TouchableOpacity
-              style={[
-                paymentPromptStyles.paymentOption,
-                mealPlanDisabled && { backgroundColor: "#ccc" },
-              ]}
-              disabled={mealPlanDisabled}
-              onPress={() => handlePayment("Meal Plan", username)}
-            >
-              <Text style={{ color: mealPlanDisabled ? "#999" : "#fff" }}>
-                Meal Plan{mealPlanDisabled ? " (Disabled if > $9.50)" : ""}
+          {/* STEP 1: Payment Method not selected => Show Payment Buttons */}
+          {!selectedMethod ? (
+            <>
+              <Text
+                style={{ fontSize: 18, fontWeight: "bold", marginBottom: 10 }}
+              >
+                Payment Methods
               </Text>
-            </TouchableOpacity>
 
-            <TouchableOpacity
-              style={paymentPromptStyles.paymentOption}
-              onPress={() => handlePayment("Flex Dollars", username)}
-            >
-              <Text style={{ color: "#fff" }}>Flex Dollars</Text>
-            </TouchableOpacity>
+              <Text style={{ fontSize: 16, marginBottom: 20 }}>
+                Total: $
+                <Text style={{ fontWeight: "bold", color: "#f60505" }}>
+                  {total}
+                </Text>
+              </Text>
 
-            <TouchableOpacity
-              style={paymentPromptStyles.paymentOption}
-              onPress={() => handlePayment("Cash", username)}
-            >
-              <Text style={{ color: "#fff" }}>Cash</Text>
-            </TouchableOpacity>
+              {/* Four Buttons */}
+              <View style={paymentPromptStyles.paymentOptionsContainer}>
+                <TouchableOpacity
+                  style={[
+                    paymentPromptStyles.paymentOption,
+                    mealSwipesDisabled && { backgroundColor: "#ccc" },
+                  ]}
+                  disabled={mealSwipesDisabled}
+                  onPress={() => setSelectedMethod("Meal Swipes")}
+                >
+                  <Text
+                    style={{
+                      color: mealSwipesDisabled ? "#999" : "#fff",
+                    }}
+                  >
+                    Meal Swipes
+                    {mealSwipesDisabled ? " (Over $9.27)" : ""}
+                  </Text>
+                </TouchableOpacity>
 
-            <TouchableOpacity
-              style={paymentPromptStyles.paymentOption}
-              onPress={() => handlePayment("Card", username)}
-            >
-              <Text style={{ color: "#fff" }}>Card</Text>
-            </TouchableOpacity>
-          </View>
+                <TouchableOpacity
+                  style={paymentPromptStyles.paymentOption}
+                  onPress={() => setSelectedMethod("Flex Dollars")}
+                >
+                  <Text style={{ color: "#fff" }}>Flex Dollars</Text>
+                </TouchableOpacity>
 
-          {/* Cancel */}
-          <TouchableOpacity
-            style={{ marginTop: 14, alignSelf: "flex-end" }}
-            onPress={onClose}
-          >
-            <Text style={{ color: "red", fontWeight: "bold", padding: 18 }}>
-              Cancel
-            </Text>
-          </TouchableOpacity>
+                <TouchableOpacity
+                  style={paymentPromptStyles.paymentOption}
+                  onPress={() => setSelectedMethod("Cash")}
+                >
+                  <Text style={{ color: "#fff" }}>Cash</Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={paymentPromptStyles.paymentOption}
+                  onPress={() => setSelectedMethod("Card")}
+                >
+                  <Text style={{ color: "#fff" }}>Card</Text>
+                </TouchableOpacity>
+              </View>
+
+              {/* Cancel */}
+              <TouchableOpacity
+                style={{ marginTop: 14, alignSelf: "flex-end" }}
+                onPress={handleClose}
+              >
+                <Text style={{ color: "red", fontWeight: "bold", padding: 10 }}>
+                  Cancel
+                </Text>
+              </TouchableOpacity>
+            </>
+          ) : (
+            /* STEP 2: Payment Method chosen => Show appropriate inputs */
+            <>
+              <Text
+                style={{ fontSize: 18, fontWeight: "bold", marginBottom: 10 }}
+              >
+                {selectedMethod}
+              </Text>
+              <Text style={{ marginBottom: 8 }}>
+                Total: $
+                <Text style={{ fontWeight: "bold", color: "#f60505" }}>
+                  {total}
+                </Text>
+              </Text>
+
+              {/* If Meal Swipes / Flex => ask MNumber; else ask first name */}
+              {selectedMethod === "Meal Swipes" ||
+              selectedMethod === "Flex Dollars" ? (
+                <>
+                  <Text style={{ marginBottom: 4 }}>Enter MNumber:</Text>
+                  <TextInput
+                    style={[modalStyles.input, { marginBottom: 12 }]}
+                    placeholder="e.g. M12345678"
+                    value={mnumber}
+                    onChangeText={(text) => {
+                      const cleaned = text.replace(/[^0-9]/g, "");
+                      const formatted = "M" + cleaned.slice(0, 8);
+                      setmnumber(formatted);
+                    }}
+                    maxLength={9}
+                    autoCapitalize="none"
+                  />
+                </>
+              ) : (
+                <>
+                  <Text style={{ marginBottom: 4 }}>Enter First Name:</Text>
+                  <TextInput
+                    style={[modalStyles.input, { marginBottom: 12 }]}
+                    placeholder="Your First Name"
+                    value={first_name}
+                    onChangeText={setFirstname}
+                    autoCapitalize="words"
+                  />
+                </>
+              )}
+
+              {/* Confirm & Cancel */}
+              <View style={{ flexDirection: "row", justifyContent: "flex-end" }}>
+                <TouchableOpacity
+                  style={{ marginRight: 18 }}
+                  onPress={() => setSelectedMethod(null)}
+                >
+                  <Text style={{ color: "red", fontWeight: "bold" }}>Back</Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity onPress={handleConfirmPayment}>
+                  <Text style={{ color: "green", fontWeight: "bold" }}>Confirm</Text>
+                </TouchableOpacity>
+              </View>
+            </>
+          )}
         </View>
       </View>
-    </Modal>
+    ) : (
+      /* Success Animation */
+      <View style={modalStyles.overlay}>
+        <View style={modalStyles.modalContainer}>
+          <LottieView
+            source={require("../../assets/images/Tick.json")}
+            autoPlay
+            loop={false}
+            style={{ width: 150, height: 150 }}
+          />
+          <Text style={{ fontSize: 16, fontWeight: "bold", marginTop: 12 }}>
+            Payment Successful!!
+          </Text>
+        </View>
+      </View>
+    )}
+  </Modal>
   );
 }

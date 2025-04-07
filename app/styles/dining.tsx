@@ -365,8 +365,8 @@ export const styles = StyleSheet.create({
   
   },
   animation: {
-    width: 50,
-    height: 50,
+    width: 150,
+    height: 150,
     marginRight: 20,
   },
   text: {
