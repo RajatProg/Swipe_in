@@ -79,7 +79,6 @@ class Config:
     json_encoders = {datetime: lambda dt: dt.isoformat()}
 
 
-# -------------------- DB Session Dependency --------------------
 def get_db():
     db = SessionLocal()
     try:
@@ -88,13 +87,10 @@ def get_db():
         db.close()
 
 
-# -------------------- Startup: Create Tables --------------------
 @app.on_event("startup")
 def startup_event():
     Base.metadata.create_all(bind=engine)
 
-
-# -------------------- User Registration & Login --------------------
 @app.post("/register/", response_model=UserResponseModel, status_code=status.HTTP_201_CREATED)
 async def create_user(user: UserBase, db: Session = Depends(get_db)):
     existing_user = db.query(User).filter(User.username == user.username).first()
@@ -157,8 +153,6 @@ async def login(user_creds: UserLogin, db: Session = Depends(get_db)):
         "role": user.role
     }
 
-
-# -------------------- Auth Helper --------------------
 async def get_current_user(credentials: HTTPAuthorizationCredentials = Security(...)):
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
@@ -176,8 +170,6 @@ async def get_current_user(credentials: HTTPAuthorizationCredentials = Security(
         raise credentials_exception from e
     return {"username": username, "role": role}
 
-
-# -------------------- Example Chick-Fil-A Menu Read --------------------
 @app.get("/CFA_Menu/")
 def read_menu(db: Session = Depends(get_db)):
     cfa_menu = db.query(Menu).all()
@@ -199,8 +191,6 @@ def read_menu(db: Session = Depends(get_db)):
             for item in cfa_menu
         ]
 
-
-# -------------------- Dining Menu Read --------------------
 @app.get("/Dinig_Menu/")
 def read_menu(db: Session = Depends(get_db)):
     dinig_menu = db.query(Dining_Menu).all()
@@ -227,8 +217,6 @@ def read_menu(db: Session = Depends(get_db)):
             for items in dinig_menu
         ]
 
-
-# -------------------- Payment Endpoint (No local_kw) --------------------
 @app.post("/payments/")
 async def process_payment(payment: PaymentRequest, db: Session = Depends(get_db)):
     swipe = db.query(Swipes).filter(Swipes.username == payment.mnumber).first()
@@ -277,8 +265,6 @@ async def get_swipe(username: str, db: Session = Depends(get_db)):
 
 
 
-
-# -------------------- Transaction Endpoint --------------------
 @app.post("/transaction/", response_model=TransactionModel)
 async def create_transaction(transaction: TransactionModel, db: Session = Depends(get_db)):
     transaction_datetime = transaction.transaction_date
@@ -306,8 +292,6 @@ async def create_transaction(transaction: TransactionModel, db: Session = Depend
     db.refresh(new_transaction)
     return new_transaction
 
-
-# -------------------- Main Entry Point --------------------
 if __name__ == "__main__":
     uvicorn.run(
         "api:app",
