@@ -960,6 +960,7 @@ function PaymentPrompt({
 // =========== Step 2 Confirm Payment ===========
 const handleConfirmPayment = async () => {
   // Basic validation
+
   if (selectedMethod === "Meal Swipes" || selectedMethod === "Flex Dollars") {
     try {
       // a) Check if MNumber exists
@@ -971,21 +972,11 @@ const handleConfirmPayment = async () => {
         window.alert("Mustang Number doesn't exist, please try again.");
         return;
       }
+
       const swipeData = await swipeRes.json();
   
       // b) Verify meal swipes or flex balance
-      if (selectedMethod === "Meal Swipes") {
-        if (swipeData.meal_swipes_left <= 0) {
-          window.alert("You are out of swipes. Please recharge your swipes.");
-          return;
-        }
-      } else if (selectedMethod === "Flex Dollars") {
-        if (swipeData.flex_dollars_left < totalNum) {
-          window.alert("You do not have enough flex dollars. Please add more money.");
-          return;
-        }
-      }
-
+      
       // c) Deduct: POST /payments/
       const paymentdata = {
         mnumber: mnumber,
@@ -997,6 +988,34 @@ const handleConfirmPayment = async () => {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(paymentdata),
       });
+
+
+      if (selectedMethod === "Meal Swipes") 
+        {
+        if (swipeData.meal_swipes_left <= 0)
+          {
+            window.alert("You are out of swipes. Please recharge your swipes.");
+            return;
+          }
+
+          else
+          {
+            payRes
+          }
+        
+        
+      } else if (selectedMethod === "Flex Dollars") {
+        if (swipeData.flex_dollars_left < totalNum) {
+          window.alert("You do not have enough flex dollars. Please add more money.");
+          return;
+        }
+
+        else 
+        {
+          payRes
+        }
+      }
+
       if (!payRes.ok) {
         window.alert("Error !! Payment failed.");
         return;

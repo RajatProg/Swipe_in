@@ -504,130 +504,120 @@ function PaymentPrompt({
   const isMealPayment = method === "Meal Swipes" || method === "Flex Dollars";
   const isMeal_Swipe = method === "Meal Swipes";
   const isemployeeMeal = method === "Employee Meal";
-  const  finalTotal  = method === "Meal Swipes" || method === "Employee Meal"
-      ? 0.00
+  const finalTotal =
+    method === "Meal Swipes" || method === "Employee Meal"
+      ? 0.0
       : method === "Flex Dollars"
-        ? 9.27
-        : 10.00;
+      ? 9.27
+      : 10.0;
   const promptLabel = isMealPayment
     ? "Please enter your Mustang Number:"
     : "Please enter your First Name:";
   const [showSuccess, setShowSuccess] = useState(false);
+
   const handleStoreTransaction = async () => {
-    // Basic validation
-    if (!method) return;
 
-    if (isMealPayment) {
-      if (!mnumber) {
-        window.alert("Error, Please enter your MNumber.");
-        return;
-      }
-    } else {
-      if (!first_name) {
-        window.alert("Error, Please enter your First Name.");
-        return;
-      }
-    }
-
-    const transactionData = {
-      username: username,
-      transaction_date: new Date().toISOString(),
-      transaction_mode: method,
-      transaction_id: uuid.v4(),
-      is_successful: true,
-      Location: "Mesquite Dining Hall",
-      Total_Amount: finalTotal,
-      MNumber: mnumber,
-      first_name: first_name,
-    };
-
-    try {
-      const res = await fetch("http://127.0.0.1:8081/transaction/", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(transactionData),
-      });
-
-      if (isMealPayment) {
-        await handleMealPayment();
-      }
-      else {
-        showSuccessAndClose();
-      }
-
-      if (!res.ok) {
-        throw new Error("Transaction DB insert failed");
-      }
-   
-    } catch (error: any) {
-      window.alert("Error storing transaction: " + error.message);
-      return;
-    }
-   
-  };
-
-  const handleMealPayment = async () => {
-    try 
+    if (method === "Meal Swipes" || method === "Flex Dollars") {
+        try {
+          // a) Check if MNumber exists
+          const swipeRes = await fetch(`http://127.0.0.1:8081/swipe/${mnumber}`, {
+            method: "GET",
+            headers: { "Content-Type": "application/json" },
+          });
+          if (!swipeRes.ok) {
+            window.alert("Mustang Number doesn't exist, please try again.");
+            return;
+          }
     
-    {
-      const paymentdata = {
-        mnumber: mnumber,
-        total: finalTotal,
-        method: method,
-      };
-
+          const swipeData = await swipeRes.json();
       
-      const username = mnumber;
-      const swipe_res = await fetch(`http://127.0.0.1:8081/swipe/${username}`, {
-        method: "GET",
-        headers: { "Content-Type": "application/json" },
-      });
-
-      const swipe_data = await swipe_res.json();
+          // b) Verify meal swipes or flex balance
           
-     if (!swipe_res.ok) {
-      window.alert("Mustang Number doesn't exist, please try again.");
-      return; 
-    }
-
+          // c) Deduct: POST /payments/
+          const paymentdata = {
+            mnumber: mnumber,
+            total: finalTotal,
+            method: method,
+          };
+          const payRes = await fetch("http://127.0.0.1:8081/payments/", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(paymentdata),
+          });
     
-    if (method === "Meal Swipes") {
-      if (swipe_data.meal_swipes_left == 0) {
-        window.alert("You are out of swipes. Please recharge your swipes.");
-        return; 
+    
+          if (method === "Meal Swipes") 
+            {
+            if (swipeData.meal_swipes_left <= 0)
+              {
+                window.alert("You are out of swipes. Please recharge your swipes.");
+                return;
+              }
+    
+              else
+              {
+                payRes
+              }
+            
+            
+          } else if (method === "Flex Dollars") {
+            if (swipeData.flex_dollars_left < finalTotal) {
+              window.alert("You do not have enough flex dollars. Please add more money.");
+              return;
+            }
+    
+            else 
+            {
+              payRes
+            }
+          }
+    
+          if (!payRes.ok) {
+            window.alert("Error !! Payment failed.");
+            return;
+          }
+        } catch (error: any) {
+          window.alert("Error processing payment: " + error.message);
+          return;
+        }
       }
-    } 
-    
-    else if (method === "Flex Dollars") 
       
-      {
-    
-      if (swipe_data.flex_dollars_left < finalTotal) {
-        window.alert("You do not have enough flex dollars. Please add more money.");
-        return; 
+      // 2) Now that we’ve passed the checks (or if Cash/Card was chosen):
+      //    INSERT the transaction record into /transaction/
+      const transactionData = {
+        username: username,
+        transaction_date: new Date().toISOString(),
+        transaction_mode: method,
+        transaction_id: uuid.v4(),
+        is_successful: true,
+        Location: "Mesquite Dining Hall",
+        Total_Amount: finalTotal,
+        MNumber: mnumber,
+        first_name: first_name,
+      };
+      
+      try {
+        const res = await fetch("http://127.0.0.1:8081/transaction/", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(transactionData),
+        });
+        if (!res.ok) {
+          throw new Error("Transaction DB insert failed");
+        }
+      } catch (error: any) {
+        window.alert("Error storing transaction: " + error.message);
+        return;
       }
-
-    } 
+      
+      // 3) If we got here => everything is successful
     
-      const res2 = await fetch("http://127.0.0.1:8081/payments/", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(paymentdata),
-      });
-
-      {res2.ok ? showSuccessAndClose() :("Error !! Payment failed.") }
-
-
-      // To verify in console
-      const data2 = await res2.json();
-      console.log("Payment processed successfully:", data2);
-    } catch (error: any) {
-      window.alert("Error processing payment: " + error.message);
-    }
+      showSuccessAndClose();
+      
   };
-function showSuccessAndClose() {
+  function showSuccessAndClose() {
     setShowSuccess(true);
-    
+
     setTimeout(() => {
       setShowSuccess(false);
       setmnumber("");
@@ -643,10 +633,9 @@ function showSuccessAndClose() {
       animationType="fade"
       onRequestClose={onClose}
     >
-      
-          {!showSuccess ? (
-            <>
-            <View style={modalStyles.overlay}>
+      {!showSuccess ? (
+        <>
+          <View style={modalStyles.overlay}>
             <View style={modalStyles.modalContainer}>
               <Text style={modalStyles.modalPromptLabel}>{promptLabel}</Text>
               <TextInput
@@ -660,17 +649,18 @@ function showSuccessAndClose() {
                 }}
                 autoCapitalize={isMealPayment ? "none" : "words"}
               />
-             {isMeal_Swipe || isemployeeMeal ? null : (<Text style={modalStyles.totalText}>Total: ${finalTotal}</Text>)}
-              
-  
-              <View style={modalStyles.buttonRow}>  
+              {isMeal_Swipe || isemployeeMeal ? null : (
+                <Text style={modalStyles.totalText}>Total: ${finalTotal}</Text>
+              )}
+
+              <View style={modalStyles.buttonRow}>
                 <TouchableOpacity
                   style={modalStyles.modalCancelButton}
                   onPress={onClose}
                 >
                   <Text style={modalStyles.modalCancelText}>Cancel</Text>
                 </TouchableOpacity>
-  
+
                 <TouchableOpacity
                   style={modalStyles.modalConfirmButton}
                   onPress={handleStoreTransaction}
@@ -680,23 +670,22 @@ function showSuccessAndClose() {
               </View>
             </View>
           </View>
-            </>
-          ) : (
-            <View style={styles.modalContainer2}>
-              <View style={styles.alertBox}>
-                <LottieView
-                  source={require("../../assets/images/Tick.json")}
-                  autoPlay
-                  loop={false}
-                  style={styles.animation}
-                />
-                <Text style={styles.text}>  
-                Payment Successful !! Thank you, {first_name || mnumber} !
-                </Text>
-              </View>
-            </View>
-          )}
-      
+        </>
+      ) : (
+        <View style={styles.modalContainer2}>
+          <View style={styles.alertBox}>
+            <LottieView
+              source={require("../../assets/images/Tick.json")}
+              autoPlay
+              loop={false}
+              style={styles.animation}
+            />
+            <Text style={styles.text}>
+              Payment Successful !! Thank you, {first_name || mnumber} !
+            </Text>
+          </View>
+        </View>
+      )}
     </Modal>
   );
 }
