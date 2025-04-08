@@ -44,20 +44,22 @@ export const styles = StyleSheet.create({
     greetingText: {
       fontSize: 18,
       color: "#333",
+      fontWeight: "bold",
     },
     logoutContainer: {
       alignItems: "center",
+      marginRight: 16,
     },
     logoutButton: {
-      backgroundColor: "#ff3b30",
-      paddingVertical: 8,
-      paddingHorizontal: 12,
-      borderRadius: 6,
+      backgroundColor: 'brown',
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 15,
     },
     logoutText: {
-      color: "#fff",
-      fontSize: 16,
-      fontWeight: "600",
+      color: '#fff',
+    fontWeight: 'bold',
+    
     },
     // BANNER
     bannerContainer: {

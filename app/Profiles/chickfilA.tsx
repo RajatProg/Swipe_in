@@ -1054,7 +1054,7 @@ const handleConfirmPayment = async () => {
     return;
   }
   
-  // 3) If we got here => everything is successful
+
   showSuccessAnimation();
 
 };
@@ -1224,7 +1224,7 @@ return (
             style={{ width: 150, height: 150 }}
           />
           <Text style={{ fontSize: 16, fontWeight: "bold", marginTop: 12 }}>
-            Payment Successful!!
+          Payment Successful !! Thank you, {first_name || mnumber} !
           </Text>
         </View>
       </View>
