@@ -531,9 +531,7 @@ function PaymentPrompt({
     
           const swipeData = await swipeRes.json();
       
-          // b) Verify meal swipes or flex balance
-          
-          // c) Deduct: POST /payments/
+      
           const paymentdata = {
             mnumber: mnumber,
             total: finalTotal,
@@ -581,9 +579,7 @@ function PaymentPrompt({
           return;
         }
       }
-      
-      // 2) Now that we’ve passed the checks (or if Cash/Card was chosen):
-      //    INSERT the transaction record into /transaction/
+
       const transactionData = {
         username: username,
         transaction_date: new Date().toISOString(),
@@ -610,8 +606,6 @@ function PaymentPrompt({
         return;
       }
       
-      // 3) If we got here => everything is successful
-    
       showSuccessAndClose();
       
   };

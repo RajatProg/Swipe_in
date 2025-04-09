@@ -1,5 +1,5 @@
 from datetime import datetime, timedelta
-from typing import Optional
+from typing import Optional, List
 import os
 import hashlib
 import uvicorn
@@ -291,6 +291,44 @@ async def create_transaction(transaction: TransactionModel, db: Session = Depend
     db.commit()
     db.refresh(new_transaction)
     return new_transaction
+
+
+@app.get("/users/", response_model=List[UserResponseModel])
+def get_users(role: Optional[str] = None, db: Session = Depends(get_db)):
+    query = db.query(User)
+    if role in ("STUDENT", "EMPLOYEE"):
+        query = query.filter(User.role == role)
+    return query.all()
+
+
+@app.delete("/users/{username}")
+def delete_user(username: str, db: Session = Depends(get_db)):
+    user = db.query(User).filter(User.username == username).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    db.delete(user)
+    db.commit()
+    return {"message": f"User {username} deleted successfully"}
+
+
+@app.put("/users/{username}", response_model=UserResponseModel)
+def update_user(username: str, updated_user: UserBase, db: Session = Depends(get_db)):
+    user = db.query(User).filter(User.username == username).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    user.first_name = updated_user.first_name
+    user.last_name = updated_user.last_name
+    user.email = updated_user.email
+    user.role = updated_user.role
+    user.password = hashlib.sha256(updated_user.password.encode('utf-8')).hexdigest()
+
+    db.commit()
+    db.refresh(user)
+    return user
+
+
+
 
 if __name__ == "__main__":
     uvicorn.run(
