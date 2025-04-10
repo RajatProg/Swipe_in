@@ -20,7 +20,7 @@ import {
 import { cfaImages } from "../styles/cfa_images";
 import uuid from "react-native-uuid";
 import { useAuth } from "../AuthContext";
-import LottieView from "lottie-react-native"; // <-- same as in Dining
+import LottieView from "lottie-react-native"; 
 
 const cfaLogo = require("../../assets/images/CFA_Logo.svg");
 
@@ -199,7 +199,7 @@ export default function ChickfilAScreen() {
   };
 
   const checkAddOnQuantity = (entree: CartItem, addOn: MenuItem) => {
-    // If there's only 1 entree, no need to ask quantity. Add the add-on to all.
+
     if (entree.quantity === 1) {
       addAddonToEntree(entree.id, addOn, 1);
     } else {

@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { View, Text, Pressable, StyleSheet } from "react-native";
+import { View, Text, Pressable, StyleSheet,Image, ImageBackground } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useNavigation } from "@react-navigation/native";
 import { useAuth } from "../AuthContext";
@@ -8,11 +8,15 @@ export default function ProfileSelection() {
   const navigation = useNavigation();
   const { role } = useAuth();
 
-  // Track which card is hovered: "admin", "chickfila", "dining", or null
   const [hoveredCard, setHoveredCard] = useState<string | null>(null);
-
+  const cfaLogo = require("../../assets/images/cfa_1.svg");
+  const profile = require("../../assets/images/profile_4.jpg");
   return (
-    <View style={styles.container}>
+    <ImageBackground
+      source={profile}
+      style={styles.container}
+      blurRadius={1}>
+    
       <Text style={styles.headerText}>Select Your Profile</Text>
 
       {role === "ADMIN" ? (
@@ -60,7 +64,7 @@ export default function ProfileSelection() {
             onHoverOut={() => setHoveredCard(null)}
             onPress={() => navigation.navigate("Profiles/chickfilA" as never)}
           >
-            <Ionicons name="fast-food" size={60} color="red" />
+             <Image source={cfaLogo} style={{ width: 70, height: 70 }} />
             <Text style={{ color: "red", fontWeight: "bold", marginTop: 10 , fontSize: 20 }}>
               Chick-fil-A
             </Text>
@@ -109,7 +113,7 @@ export default function ProfileSelection() {
             onHoverOut={() => setHoveredCard(null)}
             onPress={() => navigation.navigate("Profiles/chickfilA" as never)}
           >
-            <Ionicons name="fast-food" size={60} color="red" />
+            <Image source={cfaLogo} style={{ width: 60, height: 60 }} />
             <Text style={{ color: "red", fontWeight: "bold", marginTop: 10 , fontSize: 20}}>
               Chick-fil-A
             </Text>
@@ -141,7 +145,8 @@ export default function ProfileSelection() {
       ) : (
         <Text style={styles.noAccessText}>Access Denied: Employees Only</Text>
       )}
-    </View>
+ 
+    </ImageBackground>
   );
 }
 
@@ -150,13 +155,16 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
-    backgroundColor: "#fff",
-    padding: 10,
+    //padding: 10,
+    width: "auto",
+    height: "auto",
+    resizeMode: "cover",
   },
   headerText: {
     fontSize: 35,
     fontWeight: "bold",
     marginBottom: 90,
+    color: "white",
   },
   row: {
     flexDirection: "row",

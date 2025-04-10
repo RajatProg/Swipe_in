@@ -91,7 +91,7 @@ export default function HomePage() {
           <View style={styles.navLinks}>
             {[
               { label: 'Home', route: 'index' },
-              { label: 'Menu', route: 'menu' },
+             // { label: 'Menu', route: 'menu' },
               {label: 'Locations', route: 'locations'},
               { label: 'About', route: 'about' },
               { label: 'Login/Register', route: 'Login' }
