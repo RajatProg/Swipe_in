@@ -17,7 +17,7 @@ export default function AdminDashboard() {
         <View style={styles.cardsContainer}>
           <View style={styles.card}><Text style={styles.cardText}>Total Students</Text></View>
           <View style={styles.card}><Text style={styles.cardText}>Total Employees</Text></View>
-          <View style={styles.card}><Text style={styles.cardText}>Swipes</Text></View>
+          <View style={styles.card}><Text style={styles.cardText}>Swipe</Text></View>
           <View style={styles.card}><Text style={styles.cardText}>Income</Text></View>
         </View>
 
