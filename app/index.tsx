@@ -92,7 +92,7 @@ export default function HomePage() {
             {[
               { label: 'Home', route: 'index' },
              // { label: 'Menu', route: 'menu' },
-              {label: 'Locations', route: 'locations'},
+              {label: 'Locations', route: 'Locations'},
               { label: 'About', route: 'about' },
               { label: 'Login/Register', route: 'Login' }
             ].map((navItem, index) => (

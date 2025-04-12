@@ -10,7 +10,7 @@ type UserType = {
   first_name: string;
   last_name: string;
   email: string;
-  role: 'STUDENT' | 'EMPLOYEE';
+  role: string;
 };
 
 export default function ManageUsers() {
@@ -28,7 +28,7 @@ export default function ManageUsers() {
     last_name: '',
     email: '',
     password: '',
-    role: 'STUDENT',
+    role: '',
   });
   const [formError, setFormError] = useState('');
   const router = useRouter();
@@ -130,7 +130,7 @@ export default function ManageUsers() {
           first_name,
           last_name,
           email,
-          password: 'dummy',
+
           role,
         }),
       });
@@ -148,7 +148,7 @@ export default function ManageUsers() {
 
   const filteredUsers = users.filter((user) => {
     const matchRole = filterRole === 'ALL' || user.role === filterRole;
-    const matchSearch = [user.username, user.first_name, user.last_name, user.email].some((field) =>
+    const matchSearch = [user.username, user.first_name, user.last_name, user.email, user.role].some((field) =>
       field.toLowerCase().includes(searchText.toLowerCase())
     );
     return matchRole && matchSearch;
@@ -160,13 +160,7 @@ export default function ManageUsers() {
       <Text style={[styles.tableCell, styles.firstNameColumn]}>{item.first_name}</Text>
       <Text style={[styles.tableCell, styles.lastNameColumn]}>{item.last_name}</Text>
       <Text style={[styles.tableCell, styles.emailColumn]}>{item.email}</Text>
-      <View style={styles.roleColumn}>
-        <View style={{ marginRight: 7 }}>
-          <View style={[styles.roleBadge, item.role === 'STUDENT' ? styles.studentRole : styles.employeeRole]}>
-            <Text style={styles.roleText}>{item.role}</Text>
-          </View>
-        </View>
-      </View>
+      <Text style={[styles.tableCell, styles.roleColumn]}>{item.role}</Text>
       <View style={styles.actionsColumn}>
         <TouchableOpacity style={styles.editBtn} onPress={() => openEditModal(item)}>
           <Ionicons name="create-outline" size={18} color="white" />
