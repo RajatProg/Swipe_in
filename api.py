@@ -319,7 +319,7 @@ def update_user(username: str, updated_user: UserBase, db: Session = Depends(get
     user.last_name = updated_user.last_name
     user.email = updated_user.email
     user.role = updated_user.role
-    # user.password = hashlib.sha256(updated_user.password.encode('utf-8')).hexdigest()
+    user.password = user.password 
 
     db.commit()
     db.refresh(user)

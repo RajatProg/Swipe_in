@@ -11,6 +11,7 @@ type UserType = {
   last_name: string;
   email: string;
   role: string;
+  password: string;
 };
 
 export default function ManageUsers() {
@@ -41,7 +42,6 @@ export default function ManageUsers() {
     try {
       const response = await axios.get('http://127.0.0.1:8081/users/');
       setUsers(response.data);
-      console.log('Users fetched:', response.data);
     } catch (error) {
       console.error('Failed to fetch users:', error);
     }
@@ -73,7 +73,7 @@ export default function ManageUsers() {
   };
 
   const openAddModal = () => {
-    setFormData({ username: '', first_name: '', last_name: '', email: '', password: '', role: 'STUDENT' });
+    setFormData({ username: '', first_name: '', last_name: '', email: '', password: '', role: '' });
     setFormError('');
     setAddModalVisible(true);
   };
@@ -85,7 +85,7 @@ export default function ManageUsers() {
       first_name: user.first_name,
       last_name: user.last_name,
       email: user.email,
-      password: '',
+      password: user.password,
       role: user.role,
     });
     setFormError('');
@@ -131,10 +131,12 @@ export default function ManageUsers() {
           first_name,
           last_name,
           email,
-
           role,
+          password: editUser.password,
         }),
       });
+
+      console.log('Response:', response);
       if (response.ok) {
         setEditModalVisible(false);
         setEditUser(null);
@@ -149,7 +151,7 @@ export default function ManageUsers() {
 
   const filteredUsers = users.filter((user) => {
     const matchRole = filterRole === 'ALL' || user.role === filterRole;
-    const matchSearch = [user.username, user.first_name, user.last_name, user.email, user.role].some((field) =>
+    const matchSearch = [user.username, user.first_name, user.last_name, user.email].some((field) =>
       field.toLowerCase().includes(searchText.toLowerCase())
     );
     return matchRole && matchSearch;
@@ -161,7 +163,13 @@ export default function ManageUsers() {
       <Text style={[styles.tableCell, styles.firstNameColumn]}>{item.first_name}</Text>
       <Text style={[styles.tableCell, styles.lastNameColumn]}>{item.last_name}</Text>
       <Text style={[styles.tableCell, styles.emailColumn]}>{item.email}</Text>
-      <Text style={[styles.tableCell, styles.roleColumn]}>{item.role}</Text>
+      <View style={styles.roleColumn}>
+        <View style={{ marginRight: 7 }}>
+          <View style={[styles.roleBadge, item.role === 'STUDENT' ? styles.studentRole : styles.employeeRole]}>
+            <Text style={styles.roleText}>{item.role}</Text>
+          </View>
+        </View>
+      </View>
       <View style={styles.actionsColumn}>
         <TouchableOpacity style={styles.editBtn} onPress={() => openEditModal(item)}>
           <Ionicons name="create-outline" size={18} color="white" />
