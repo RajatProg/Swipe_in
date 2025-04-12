@@ -293,13 +293,11 @@ async def create_transaction(transaction: TransactionModel, db: Session = Depend
     return new_transaction
 
 
-@app.get("/users/", response_model=List[UserResponseModel])
-def get_users(role: Optional[str] = None, db: Session = Depends(get_db)):
-    query = db.query(User)
-    if role in ("STUDENT", "EMPLOYEE"):
-        query = query.filter(User.role == role)
-    return query.all()
-
+@app.get("/users/")
+def read_users(db: Session = Depends(get_db)):
+    users = db.query(User).filter(User.role != "ADMIN").all()
+    return users    
+    
 
 @app.delete("/users/{username}")
 def delete_user(username: str, db: Session = Depends(get_db)):

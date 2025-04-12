@@ -41,6 +41,7 @@ export default function ManageUsers() {
     try {
       const response = await axios.get('http://127.0.0.1:8081/users/');
       setUsers(response.data);
+      console.log('Users fetched:', response.data);
     } catch (error) {
       console.error('Failed to fetch users:', error);
     }
