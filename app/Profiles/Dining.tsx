@@ -139,9 +139,9 @@ export default function DiningScreen() {
     const hr = currentTime.getHours();
     const min = currentTime.getMinutes();
     const totalMinutes = hr * 60 + min;
-    if (totalMinutes >= 7 * 60 && totalMinutes <= 10 * 60) {
+    if (totalMinutes >= 7 * 60 && totalMinutes <= 12 * 60) {
       setSelectedCategory("Breakfast");
-    } else if (totalMinutes >= 11 * 60 && totalMinutes <= 15 * 60 + 30) {
+    } else if (totalMinutes >= 12 * 60 && totalMinutes <= 15 * 60 + 30) {
       setSelectedCategory("Lunch");
     } else if (totalMinutes >= 16 * 60 && totalMinutes <= 22 * 60) {
       setSelectedCategory("Dinner");

@@ -1,21 +1,45 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect } from "react";
 import {
   View,
   Text,
   TouchableOpacity,
-  StyleSheet,
+  Platform,
   ScrollView,
-  TextInput,
+  StyleSheet,
+  LayoutChangeEvent,
   Image,
   ImageBackground,
 } from "react-native";
-import { useNavigation } from "@react-navigation/native";
+import DateTimePicker from "@react-native-community/datetimepicker";
+import { useNavigation, useRoute } from "@react-navigation/native";
 
-// Image assets – update paths and formats as needed
-const BackgroundImage = require("../assets/images/dining.jpg");
-const NavbarLogo = require("../assets/images/swipein_1.png");
-// Use a PNG version of the Chick‑fil‑A logo (or configure SVG support if needed)
-const CFA_Logo = require("../assets/images/CFA_Logo.svg");
+// Custom hook to track hover state (for web)
+function useHover() {
+  const [isHovered, setHovered] = useState(false);
+  const hoverProps = {
+    onMouseEnter: () => setHovered(true),
+    onMouseLeave: () => setHovered(false),
+  };
+  return { isHovered, hoverProps };
+}
+
+// NavLink component that underlines when hovered or active.
+type NavLinkProps = {
+  label: string;
+  route: string;
+  isActive: boolean;
+  onPress: () => void;
+};
+
+function NavLink({ label, route, isActive, onPress }: NavLinkProps) {
+  const { isHovered, hoverProps } = useHover();
+  const activeStyle = (isHovered || isActive) ? styles.navTextActive : {};
+  return (
+    <TouchableOpacity onPress={onPress} style={styles.navItem} {...hoverProps}>
+      <Text style={[styles.navText, activeStyle]}>{label}</Text>
+    </TouchableOpacity>
+  );
+}
 
 function formatDateToYMD(d: Date): string {
   const y = d.getFullYear();
@@ -29,22 +53,98 @@ function createLocalNoonDate(dateString: string): Date {
   return new Date(year, month - 1, day, 12, 0, 0);
 }
 
+function createLocalNoonDateForToday(): Date {
+  const now = new Date();
+  return new Date(now.getFullYear(), now.getMonth(), now.getDate(), 12, 0, 0);
+}
+
+function formatCurrentTimeLabel(d: Date): string {
+  let hours = d.getHours();
+  const minutes = d.getMinutes();
+  const ampm = hours >= 12 ? "PM" : "AM";
+  hours = hours % 12 || 12;
+  const mm = String(minutes).padStart(2, "0");
+  return `${hours}:${mm} ${ampm}`;
+}
+
+/**
+ * Check if a given location is open based on its title and a given date.
+ */
+function isLocationOpen(featureTitle: string, date: Date): boolean {
+  const day = date.getDay();
+  const totalMinutes = date.getHours() * 60 + date.getMinutes();
+
+  if (featureTitle === "Chick-fil-A") {
+    if (day === 0 || day === 6) {
+      return false;
+    }
+    return totalMinutes >= 8 * 60 && totalMinutes < 23 * 60;
+  } else {
+    let openTime: number;
+    let closeTime: number;
+    if (day >= 1 && day <= 5) {
+      openTime = 8 * 60;
+      closeTime = 23 * 60;
+    } else {
+      openTime = 7 * 60;
+      closeTime = 23 * 60;
+    }
+    return totalMinutes >= openTime && totalMinutes < closeTime;
+  }
+}
+
+const featuresData = [
+  {
+    title: "Chick-fil-A",
+    description: "Famous for their chicken sandwiches.",
+    hoverHours: `Regular Hours
+
+Monday - Thursday :   10:30 AM - 04:00 PM
+
+Friday :     10:30 AM - 02:00 PM
+
+Saturday - Sunday :   Closed`,
+    image: require("../assets/images/cfa_local.jpg"),
+  },
+  {
+    title: "Mesquite Dining Hall",
+    description: "Enjoy a variety of meals and services.",
+    hoverHours: `Regular Hours
+
+Everyday
+
+  Breakfast : 07:00 AM - 12:00 PM
+
+  Lunch : 12:00 AM - 03:30 PM
+
+  Dinner : 04:30 PM - 10:00 PM`,
+    image: require("../assets/images/dine.jpg"),
+  },
+];
+
 export default function LocationScreen() {
   const navigation = useNavigation();
-  const scrollRef = useRef<ScrollView>(null);
+  const route = useRoute(); // Get the current route
+  // Define the nav items with route names that match your navigation configuration.
+  const navItems = [
+    { label: "Home", route: "index" },
+    { label: "Menu", route: "Locations" },
+    { label: "About", route: "about" },
+    { label: "Login/Register", route: "Login" },
+  ];
 
-  // Date and time states
-  const [selectedDate, setSelectedDate] = useState<Date>(new Date());
+  const [selectedDate, setSelectedDate] = useState<Date>(
+    createLocalNoonDateForToday()
+  );
   const [currentTime, setCurrentTime] = useState<Date>(new Date());
   const [timelineWidth, setTimelineWidth] = useState<number>(0);
+  const [showDatePicker, setShowDatePicker] = useState<boolean>(false);
 
-  // Update current time every minute
   useEffect(() => {
     const timer = setInterval(() => setCurrentTime(new Date()), 60000);
     return () => clearInterval(timer);
   }, []);
 
-  // --- Timeline Calculation ---
   function getTimeFraction(d: Date): number {
     const hr = d.getHours();
     const min = d.getMinutes();
@@ -55,242 +155,395 @@ export default function LocationScreen() {
   const elapsedWidth = pointerLeft;
   const remainingWidth = timelineWidth - pointerLeft;
 
-  function formatCurrentTimeLabel(d: Date): string {
-    let hours = d.getHours();
-    const minutes = d.getMinutes();
-    const ampm = hours >= 12 ? "PM" : "AM";
-    hours = hours % 12 || 12;
-    const mm = String(minutes).padStart(2, "0");
-    return `${hours}:${mm} ${ampm}`;
-  }
-  const currentTimeLabel = formatCurrentTimeLabel(currentTime);
-
-  // Date change handler for TextInput (web-friendly)
   const handleWebDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const forcedNoon = createLocalNoonDate(e.target.value);
     setSelectedDate(forcedNoon);
   };
 
+  const onDateChange = (event: any, date?: Date) => {
+    if (Platform.OS !== "web") {
+      setShowDatePicker(false);
+    }
+    if (date) {
+      const forcedNoon = new Date(
+        date.getFullYear(),
+        date.getMonth(),
+        date.getDate(),
+        12,
+        0,
+        0
+      );
+      setSelectedDate(forcedNoon);
+    }
+  };
+
   return (
-    <ScrollView ref={scrollRef} showsHorizontalScrollIndicator={false}>
-      <ImageBackground source={BackgroundImage} style={styles.backgroundImage} blurRadius={1}>
-        <View style={styles.background}>
-          {/* Navigation Bar */}
-          <View style={styles.navbar}>
-            <Image source={NavbarLogo} style={styles.navbarTitle} />
-            <View style={styles.navLinks}>
-              {[
-                { label: "Home", route: "index" },
-                { label: "Locations", route: "Locations" },
-                { label: "About", route: "about" },
-                { label: "Login/Register", route: "Login" },
-              ].map((navItem, idx) => (
-                <TouchableOpacity
-                  key={idx}
-                  onPress={() => navigation.navigate(navItem.route as never)}
-                  style={styles.navItem}
-                >
-                  <Text style={styles.navText}>{navItem.label}</Text>
-                </TouchableOpacity>
-              ))}
+    <ScrollView style={styles.container}>
+      {/* NAVIGATION BAR */}
+      <View style={styles.navbar}>
+        <TouchableOpacity onPress={() => navigation.navigate("index" as never)}>
+          <Image
+            source={require("@/assets/images/swipein_1.png")}
+            style={styles.navbarLogo}
+          />
+        </TouchableOpacity>
+        <View style={styles.navLinks}>
+          {navItems.map((navItem, idx) => (
+            <NavLink
+              key={idx}
+              label={navItem.label}
+              route={navItem.route}
+              // Determine active state using the current route name
+              isActive={route.name === navItem.route}
+              onPress={() => navigation.navigate(navItem.route as never)}
+            />
+          ))}
+        </View>
+      </View>
+      <Text style={styles.sectionTitle}>Locations</Text>
+
+      {/* TIMELINE AND DATE PICKER */}
+      <View style={styles.timelineDateRow}>
+        <View style={styles.timelineDarkBackground}>
+          <View style={styles.timelineLabelsRow}>
+            <Text style={styles.timelineLabel}>12:00 AM</Text>
+            <Text style={styles.timelineLabel}>06:00 AM</Text>
+            <Text style={styles.timelineLabel}>12:00 PM</Text>
+            <Text style={styles.timelineLabel}>06:00 PM</Text>
+            <Text style={styles.timelineLabel}>12:00 AM</Text>
+          </View>
+          <View
+            style={styles.timelineTrackContainer}
+            onLayout={(e: LayoutChangeEvent) =>
+              setTimelineWidth(e.nativeEvent.layout.width)
+            }
+          >
+            <View style={[styles.timelineElapsed, { width: elapsedWidth }]} />
+            <View
+              style={[
+                styles.timelineRemaining,
+                { left: elapsedWidth, width: remainingWidth },
+              ]}
+            />
+            <View style={[styles.pointerKnob, { left: pointerLeft - 5 }]} />
+            <View style={[styles.pointerBubble, { left: pointerLeft - 30 }]}>
+              <Text style={styles.pointerBubbleText}>
+                {formatCurrentTimeLabel(currentTime)}
+              </Text>
             </View>
           </View>
-
-          {/* Content Section */}
-          <ScrollView style={styles.container}>
-            {/* Timeline (Barcode-style time indicator) */}
-            <View
-              style={styles.timelineTrackContainer}
-              onLayout={(e) => setTimelineWidth(e.nativeEvent.layout.width)}
-            >
-              <View style={[styles.timelineElapsed, { width: elapsedWidth }]} />
-              <View style={[styles.timelineRemaining, { width: remainingWidth }]} />
-              <View style={[styles.pointerKnob, { left: pointerLeft - 5 }]} />
-              <View style={[styles.pointerBubble, { left: pointerLeft - 30 }]}>
-                <Text style={styles.pointerBubbleText}>{currentTimeLabel}</Text>
-              </View>
-            </View>
-            <Text style={styles.timeLabel}>Current Time: {currentTimeLabel}</Text>
-
-            {/* Date Picker */}
-            <View style={styles.dateRow}>
-              <Text style={styles.dateLabel}>Date:</Text>
-              <TextInput
-                style={styles.dateInput}
-                value={formatDateToYMD(selectedDate)}
-                onChangeText={(val) =>
-                  // Simulate event for web
-                  handleWebDateChange({ target: { value: val } } as any)
-                }
-              />
-            </View>
-
-            {/* Location Cards (Column-wise) */}
-            <TouchableOpacity
-              style={styles.card}
-              onPress={() => navigation.navigate("Profiles/chickfilA" as never)}
-            >
-              <Image source={CFA_Logo} style={styles.cardImage} />
-              <Text style={styles.closedTag}>CLOSED</Text>
-              <Text style={styles.cardTitle}>Chick-fil-A</Text>
-              <Text style={styles.cardSub}>Normal Hours</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={styles.card}
-              onPress={() => navigation.navigate("Profiles/Dining" as never)}
-            >
-              <Image source={BackgroundImage} style={styles.cardImage} />
-              <Text style={styles.closedTag}>CLOSED</Text>
-              <Text style={styles.cardTitle}>Shepler Dining Hall</Text>
-              <Text style={styles.cardSub}>Normal Hours</Text>
-            </TouchableOpacity>
-          </ScrollView>
         </View>
-      </ImageBackground>
+
+        <View style={styles.dateContainer}>
+          <Text style={styles.dateLabel}>Date</Text>
+          {Platform.OS === "web" ? (
+            <input
+              type="date"
+              value={formatDateToYMD(selectedDate)}
+              onChange={handleWebDateChange}
+              style={styles.dateInputWeb}
+            />
+          ) : (
+            <>
+              <TouchableOpacity
+                style={styles.dateButton}
+                onPress={() => setShowDatePicker(true)}
+              >
+                <Text style={styles.dateButtonText}>
+                  {formatDateToYMD(selectedDate)}
+                </Text>
+              </TouchableOpacity>
+              {showDatePicker && (
+                <DateTimePicker
+                  value={selectedDate}
+                  mode="date"
+                  display="calendar"
+                  onChange={onDateChange}
+                />
+              )}
+            </>
+          )}
+        </View>
+      </View>
+
+      {/* LOCATION CARDS */}
+      <View style={styles.featuresGrid}>
+        {featuresData.map((feature, index) => {
+          const { isHovered, hoverProps } = useHover();
+          const locationOpen = isLocationOpen(feature.title, selectedDate);
+          return (
+            <TouchableOpacity
+              key={index}
+              {...hoverProps}
+              style={[
+                styles.featureCard,
+                locationOpen ? styles.openCard : styles.closedCard,
+              ]}
+              onPress={() => {
+                if (feature.title === "Chick-fil-A") {
+                  navigation.navigate("Menu/ChickfilA" as never);
+                } else if (feature.title === "Mesquite Dining Hall") {
+                  navigation.navigate("Menu/Dining" as never);
+                }
+              }}
+            >
+              {locationOpen ? (
+                <Text style={styles.openTag}>OPEN</Text>
+              ) : (
+                <Text style={styles.closedTag}>CLOSED</Text>
+              )}
+              {!isHovered && (
+                <ImageBackground
+                  source={feature.image}
+                  style={styles.featureImage}
+                  resizeMode="stretch"
+                />
+              )}
+              <View style={styles.feature}>
+                <Text style={styles.featureTitle}>{feature.title}</Text>
+                {isHovered ? (
+                  <Text style={styles.featureDescription}>
+                    {feature.hoverHours}
+                  </Text>
+                ) : (
+                  <Text style={styles.featureDescription}>
+                    {feature.description}
+                  </Text>
+                )}
+              </View>
+            </TouchableOpacity>
+          );
+        })}
+      </View>
     </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
-  backgroundImage: {
+  container: {
     flex: 1,
-    resizeMode: "cover",
+    backgroundColor: "#f5f5f5",
   },
-  background: {
-    backgroundColor: "rgba(255,255,255,0.85)",
-    flex: 1,
-  },
-  // Navbar styles
+  // Navigation Bar
   navbar: {
     flexDirection: "row",
-    alignItems: "center",
     justifyContent: "space-between",
-    padding: 16,
-    backgroundColor: "#fff",
-    borderBottomWidth: 1,
-    borderColor: "#ccc",
+    alignItems: "center",
+    flexWrap: "wrap",
   },
-  navbarTitle: {
+  navbarLogo: {
     width: 100,
-    height: 40,
-    resizeMode: "contain",
+    height: 80,
+    marginLeft: 40,
+    marginTop: 20,
   },
   navLinks: {
     flexDirection: "row",
-    alignItems: "center",
+    marginRight: 40,
   },
   navItem: {
-    marginLeft: 20,
+    marginHorizontal: 40,
   },
   navText: {
+    color: "black",
+    fontWeight: "bold",
     fontSize: 16,
-    color: "#333",
+    marginHorizontal: 10,
   },
-  // Container for the main content
-  container: {
-    padding: 16,
-    backgroundColor: "#fff",
+  // Thick underline style using borderBottom for active or hovered nav items
+  navTextActive: {
+    borderBottomWidth: 5,
+    borderBottomColor: "brown",
+    paddingBottom: 2,
+    borderRadius: 5,
   },
-  // Timeline (Barcode-style) styles
-  timelineTrackContainer: {
-    height: 20,
+  // Timeline and Date Picker styles
+  timelineDateRow: {
     flexDirection: "row",
-    backgroundColor: "#e0e0e0",
-    borderRadius: 10,
-    marginVertical: 16,
+    alignItems: "center",
+    justifyContent: "space-between",
+    margin: 16,
+    marginBottom: 40,
+  },
+  timelineDarkBackground: {
+    backgroundColor: "transparent",
+    padding: 20,
+    flex: 1,
+    borderRadius: 12,
+  },
+  timelineLabelsRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    marginBottom: 40,
+  },
+  timelineLabel: {
+    fontSize: 13,
+    color: "maroon",
+    fontWeight: "bold",
+    textAlign: "center",
+  },
+  timelineTrackContainer: {
     position: "relative",
-    overflow: "hidden",
+    height: 4,
+    backgroundColor: "transparent",
+    marginTop: 13,
+    margin: 5,
   },
   timelineElapsed: {
-    backgroundColor: "#000",
-    height: "100%",
+    position: "absolute",
+    left: 0,
+    top: 0,
+    height: 4,
+    backgroundColor: "black",
   },
   timelineRemaining: {
-    backgroundColor: "#ccc",
-    height: "100%",
+    position: "absolute",
+    top: 0,
+    height: 4,
+    backgroundColor: "grey",
   },
   pointerKnob: {
     position: "absolute",
-    top: -5,
+    top: -6,
     width: 16,
     height: 16,
-    borderRadius: 8,
-    backgroundColor: "#000",
+    borderRadius: 16,
+    backgroundColor: "maroon",
   },
   pointerBubble: {
     position: "absolute",
-    top: -35,
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    backgroundColor: "#000",
-    borderRadius: 4,
+    bottom: 14,
+    backgroundColor: "black",
+    borderRadius: 14,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
   },
   pointerBubbleText: {
     color: "#fff",
     fontSize: 12,
   },
-  timeLabel: {
-    alignSelf: "flex-end",
-    marginBottom: 10,
-    fontWeight: "500",
-  },
-  // Date Picker styles
-  dateRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginBottom: 16,
-  },
-  dateLabel: {
-    fontSize: 16,
+  dateContainer: {
+    flexDirection: "column",
+    alignItems: "flex-start",
+    marginLeft: 10,
+    marginTop: 30,
     marginRight: 10,
   },
-  dateInput: {
-    borderBottomWidth: 1,
-    borderBottomColor: "#999",
-    fontSize: 16,
-    width: 120,
+  dateLabel: {
+    fontSize: 14,
+    color: "#333",
+    marginBottom: 4,
   },
-  // Card styles
-  card: {
-    backgroundColor: "#f9f9f9",
-    borderRadius: 12,
-    padding: 10,
-    marginBottom: 20,
-    elevation: 2,
+  dateInputWeb: {
+    padding: 9,
+    paddingLeft: 12,
+    fontSize: 17,
+    borderWidth: 0.5,
+    borderColor: "#e0e0e0",
+    borderRadius: 15,
+  },
+  dateButton: {
+    backgroundColor: "#007AFF",
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 6,
+  },
+  dateButtonText: {
+    color: "#fff",
+    fontSize: 14,
+    fontWeight: "600",
+  },
+  sectionTitle: {
+    paddingTop: 40,
+    fontSize: 46,
+    fontWeight: "bold",
+    marginBottom: 25,
+    color: "brown",
+    textAlign: "center",
+  },
+  // Feature Cards styles
+  featuresGrid: {
+    flexDirection: "row",
+    justifyContent: "space-evenly",
+    marginTop: 30,
+    flexWrap: "wrap",
+  },
+  featureCard: {
+    width: 400,
+    margin: 10,
+    borderRadius: 20,
+    overflow: "hidden",
     shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
+    shadowOffset: { width: 15, height: 15 },
+    shadowOpacity: 0.2,
     shadowRadius: 4,
     position: "relative",
+    borderWidth: 3,
   },
-  cardImage: {
-    width: "100%",
-    height: 150,
-    borderRadius: 10,
-    resizeMode: "cover",
+  openCard: {
+    borderColor: "green",
   },
-  cardTitle: {
-    fontSize: 18,
-    fontWeight: "bold",
-    marginTop: 8,
-  },
-  cardSub: {
-    fontSize: 14,
-    color: "#777",
+  closedCard: {
+    borderColor: "red",
   },
   closedTag: {
     position: "absolute",
     top: 10,
-    left: 10,
-    backgroundColor: "#fff",
-    color: "red",
+    right: 10,
+    backgroundColor: "red",
+    color: "white",
     fontWeight: "bold",
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 4,
-    fontSize: 12,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 20,
+    fontSize: 16,
     borderColor: "red",
-    borderWidth: 1,
+    borderWidth: 2,
+    zIndex: 1000,
+  },
+  openTag: {
+    position: "absolute",
+    top: 10,
+    right: 10,
+    backgroundColor: "green",
+    color: "white",
+    fontWeight: "bold",
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 20,
+    fontSize: 16,
+    borderColor: "green",
+    borderWidth: 2,
+    zIndex: 1000,
+  },
+  featureImage: {
+    width: "100%",
+    height: 200,
+    resizeMode: "contain",
+    borderTopLeftRadius: 12,
+    borderTopRightRadius: 12,
+  },
+  feature: {
+    backgroundColor: "hsla(0, 40.00%, 98.00%, 0.66)",
+    padding: 10,
+    borderBottomRightRadius: 70,
+    position: "relative",
+  },
+  featureTitle: {
+    fontSize: 21,
+    fontWeight: "700",
+    color: "black",
+    paddingTop: 3,
+    paddingBottom: 10,
+    textAlign: "center",
+  },
+  featureDescription: {
+    fontSize: 16,
+    marginTop: 14,
+    color: "rgba(3, 0, 0, 0.98)",
+    textAlign: "center",
+    fontWeight: "500",
   },
 });
+
+export { NavLink };

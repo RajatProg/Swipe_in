@@ -87,7 +87,7 @@ export default function Login() {
               {[
                 { label: 'Home', route: 'index' },
                 { label: 'Membership', route: 'membership'},
-                {label: 'Locations', route: 'Locations'},
+                {label: 'Menu', route: 'Locations'},
                 { label: 'About', route: 'about' }
               ].map((navItem, index) => (
                 <TouchableOpacity

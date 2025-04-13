@@ -17,6 +17,9 @@ export default function RootLayout() {
         <Stack.Screen name="+not-found" />
         <Stack.Screen name="Profiles/Admin" />
         <Stack.Screen name="Locations" />
+        <Stack.Screen name="Menu_items" />
+        <Stack.Screen name="Menu/ChickfilA" />
+        <Stack.Screen name="Menu/Dining" />
       </Stack>
     </AuthProvider>
   );

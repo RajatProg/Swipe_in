@@ -94,9 +94,12 @@ def startup_event():
 @app.post("/register/", response_model=UserResponseModel, status_code=status.HTTP_201_CREATED)
 async def create_user(user: UserBase, db: Session = Depends(get_db)):
     existing_user = db.query(User).filter(User.username == user.username).first()
+    existing_email = db.query(User).filter(User.email == user.email).first()
+    if existing_email:
+        raise HTTPException(status_code=400, detail="Email already registered")
     if existing_user:
         raise HTTPException(status_code=400, detail="Username already registered")
-
+    
     hashed_password = hashlib.sha256(user.password.encode('utf-8')).hexdigest()
     new_user = User(
         username=user.username,
@@ -264,12 +267,10 @@ async def get_swipe(username: str, db: Session = Depends(get_db)):
     }
 
 
-
 @app.post("/transaction/", response_model=TransactionModel)
 async def create_transaction(transaction: TransactionModel, db: Session = Depends(get_db)):
     transaction_datetime = transaction.transaction_date
 
-    # If hour & minute are zero, replace them with current time 
     if transaction_datetime.hour == 0 and transaction_datetime.minute == 0:
         now = datetime.now()
         transaction_datetime = transaction_datetime.replace(

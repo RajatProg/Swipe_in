@@ -55,6 +55,14 @@ export const styles = StyleSheet.create({
       fontSize: 16,
       marginHorizontal: 10,
     },
+
+    navTextActive: {
+      borderBottomWidth: 5,
+      borderBottomColor: "brown",
+      paddingBottom: 2,
+      borderRadius: 5,
+    },
+    
     backgroundImage: {
       width: '100%',
       resizeMode: 'cover',
