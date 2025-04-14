@@ -135,8 +135,8 @@ function CategorySection({
             <TouchableOpacity key={item.id} style={localStyles.card}>
               <View style={localStyles.textContainer}>
                 <Text style={localStyles.itemName}>{item.title}</Text>
-                <Text style={localStyles.calories}>{item.diet}</Text>
-                <Text style={localStyles.calories}>{item.portion}</Text>
+                {item.diet === "Vegan" ? ( <Text style={localStyles.diet1}>{item.diet}</Text> ) : (<Text style={localStyles.diet}>{item.diet}</Text>) }
+                <Text style={localStyles.portion}>{item.portion}</Text>
                 <Text style={localStyles.calories}>{item.calories} Cal</Text>
               </View>
             </TouchableOpacity>
@@ -481,6 +481,7 @@ const styles = StyleSheet.create({
     fontSize: 28,
     fontWeight: "bold",
     color: "black",
+    marginBottom: 59,
   },
   categoryButtonTextSelected: {
     borderBottomWidth: 5,
@@ -535,10 +536,28 @@ const localStyles = StyleSheet.create({
   },
   itemName: {
     fontSize: 16,
-    fontWeight: "600",
+    fontWeight: "700",
     color: "#000",
   },
   calories: {
+    fontSize: 14,
+    color: "red",
+    fontWeight: '600',
+    marginTop: 4,
+  },
+  diet: {
+    fontSize: 14,
+    color: "#666",
+    fontWeight: '600',
+    marginTop: 4,
+  },
+  diet1: {
+    fontSize: 14,
+    color: "green",
+    marginTop: 4,
+    fontWeight: '600',
+  },
+  portion: {
     fontSize: 14,
     color: "#666",
     marginTop: 4,
