@@ -13,7 +13,6 @@ import {
 import { useNavigation, useRoute } from "@react-navigation/native";
 import { cfaImages } from "../styles/cfa_images";
 
-// Data shape from your CFA API
 type MenuAPIItem = {
   menu_id: number;
   item_title: string;
@@ -70,7 +69,7 @@ type NavLinkProps = {
   isActive: boolean;
   onPress: () => void;
 };
-function NavLink({ label, route, isActive, onPress }: NavLinkProps) {
+function NavLink({ label, isActive, onPress }: NavLinkProps) {
   const { isHovered, hoverProps } = useHover();
   const activeStyle = (isHovered || isActive) ? localStyles.navTextActive : {};
   return (

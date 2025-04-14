@@ -10,7 +10,6 @@ import {
   Image,
   ImageBackground,
 } from "react-native";
-import DateTimePicker from "@react-native-community/datetimepicker";
 import { useNavigation, useRoute } from "@react-navigation/native";
 
 // Custom hook to track hover state (for web)
@@ -33,29 +32,12 @@ type NavLinkProps = {
 
 function NavLink({ label, route, isActive, onPress }: NavLinkProps) {
   const { isHovered, hoverProps } = useHover();
-  const activeStyle = (isHovered || isActive) ? styles.navTextActive : {};
+  const activeStyle = isHovered || isActive ? styles.navTextActive : {};
   return (
     <TouchableOpacity onPress={onPress} style={styles.navItem} {...hoverProps}>
       <Text style={[styles.navText, activeStyle]}>{label}</Text>
     </TouchableOpacity>
   );
-}
-
-function formatDateToYMD(d: Date): string {
-  const y = d.getFullYear();
-  const m = String(d.getMonth() + 1).padStart(2, "0");
-  const day = String(d.getDate()).padStart(2, "0");
-  return `${y}-${m}-${day}`;
-}
-
-function createLocalNoonDate(dateString: string): Date {
-  const [year, month, day] = dateString.split("-").map(Number);
-  return new Date(year, month - 1, day, 12, 0, 0);
-}
-
-function createLocalNoonDateForToday(): Date {
-  const now = new Date();
-  return new Date(now.getFullYear(), now.getMonth(), now.getDate(), 12, 0, 0);
 }
 
 function formatCurrentTimeLabel(d: Date): string {
@@ -67,30 +49,35 @@ function formatCurrentTimeLabel(d: Date): string {
   return `${hours}:${mm} ${ampm}`;
 }
 
-/**
- * Check if a given location is open based on its title and a given date.
- */
-function isLocationOpen(featureTitle: string, date: Date): boolean {
-  const day = date.getDay();
-  const totalMinutes = date.getHours() * 60 + date.getMinutes();
+function isLocationOpen(feature: any, time: Date): boolean {
+  const day = time.getDay();
+  const totalMinutes = time.getHours() * 60 + time.getMinutes();
 
-  if (featureTitle === "Chick-fil-A") {
+  if (feature.title === "Chick-fil-A") {
+
     if (day === 0 || day === 6) {
       return false;
     }
-    return totalMinutes >= 8 * 60 && totalMinutes < 23 * 60;
-  } else {
-    let openTime: number;
-    let closeTime: number;
-    if (day >= 1 && day <= 5) {
-      openTime = 8 * 60;
-      closeTime = 23 * 60;
-    } else {
-      openTime = 7 * 60;
-      closeTime = 23 * 60;
+  
+    if (day === 5) {
+      
+      return totalMinutes >= (10 * 60 + 30) && totalMinutes < (14 * 60);
     }
-    return totalMinutes >= openTime && totalMinutes < closeTime;
+
+    return totalMinutes >= (10 * 60 + 30) && totalMinutes < (16 * 60);
+  } else if (feature.title === "Mesquite Dining Hall") {
+
+    const intervals = [
+      { start: 7 * 60, end: 12 * 60 },         
+      { start: 12 * 60, end: 15 * 60 + 30 },  
+      { start: 16 * 60 + 30, end: 22 * 60 },      
+    ];
+    return intervals.some(
+      (interval) => totalMinutes >= interval.start && totalMinutes < interval.end
+    );
   }
+  // Default: return closed for any unknown feature.
+  return false;
 }
 
 const featuresData = [
@@ -99,11 +86,11 @@ const featuresData = [
     description: "Famous for their chicken sandwiches.",
     hoverHours: `Regular Hours
 
-Monday - Thursday :  10:30 AM - 04:00 PM
+Monday - Thursday : 10:30 AM - 04:00 PM
 
-                      Friday :  10:30 AM - 02:00 PM 
+                      Friday : 10:30 AM - 02:00 PM 
            
-Saturday - Sunday :  Closed`,
+Saturday - Sunday : Closed`,
     image: require("../assets/images/cfa_local.jpg"),
   },
   {
@@ -115,7 +102,7 @@ Everyday
 
   Breakfast : 07:00 AM - 12:00 PM
 
-       Lunch : 12:00 AM - 03:30 PM
+       Lunch : 12:00 PM - 03:30 PM
 
       Dinner : 04:30 PM - 10:00 PM`,
     image: require("../assets/images/dine.jpg"),
@@ -124,7 +111,7 @@ Everyday
 
 export default function LocationScreen() {
   const navigation = useNavigation();
-  const route = useRoute(); 
+  const route = useRoute();
   const navItems = [
     { label: "Home", route: "index" },
     { label: "Menu", route: "Locations" },
@@ -132,18 +119,16 @@ export default function LocationScreen() {
     { label: "Login/Register", route: "Login" },
   ];
 
-  const [selectedDate, setSelectedDate] = useState<Date>(
-    createLocalNoonDateForToday()
-  );
+  // Using the live current time (updating every minute)
   const [currentTime, setCurrentTime] = useState<Date>(new Date());
   const [timelineWidth, setTimelineWidth] = useState<number>(0);
-  const [showDatePicker, setShowDatePicker] = useState<boolean>(false);
 
   useEffect(() => {
     const timer = setInterval(() => setCurrentTime(new Date()), 60000);
     return () => clearInterval(timer);
   }, []);
 
+  // Calculate timeline pointer position
   function getTimeFraction(d: Date): number {
     const hr = d.getHours();
     const min = d.getMinutes();
@@ -153,28 +138,6 @@ export default function LocationScreen() {
   const pointerLeft = fraction * timelineWidth;
   const elapsedWidth = pointerLeft;
   const remainingWidth = timelineWidth - pointerLeft;
-
-  const handleWebDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const forcedNoon = createLocalNoonDate(e.target.value);
-    setSelectedDate(forcedNoon);
-  };
-
-  const onDateChange = (event: any, date?: Date) => {
-    if (Platform.OS !== "web") {
-      setShowDatePicker(false);
-    }
-    if (date) {
-      const forcedNoon = new Date(
-        date.getFullYear(),
-        date.getMonth(),
-        date.getDate(),
-        12,
-        0,
-        0
-      );
-      setSelectedDate(forcedNoon);
-    }
-  };
 
   return (
     <ScrollView style={styles.container}>
@@ -192,7 +155,6 @@ export default function LocationScreen() {
               key={idx}
               label={navItem.label}
               route={navItem.route}
-              // Determine active state using the current route name
               isActive={route.name === navItem.route}
               onPress={() => navigation.navigate(navItem.route as never)}
             />
@@ -201,7 +163,7 @@ export default function LocationScreen() {
       </View>
       <Text style={styles.sectionTitle}>Locations</Text>
 
-      {/* TIMELINE AND DATE PICKER */}
+      {/* TIMELINE */}
       <View style={styles.timelineDateRow}>
         <View style={styles.timelineDarkBackground}>
           <View style={styles.timelineLabelsRow}>
@@ -232,44 +194,15 @@ export default function LocationScreen() {
             </View>
           </View>
         </View>
-
-        <View style={styles.dateContainer}>
-          <Text style={styles.dateLabel}>Date</Text>
-          {Platform.OS === "web" ? (
-            <input
-              type="date"
-              value={formatDateToYMD(selectedDate)}
-              onChange={handleWebDateChange}
-              style={styles.dateInputWeb}
-            />
-          ) : (
-            <>
-              <TouchableOpacity
-                style={styles.dateButton}
-                onPress={() => setShowDatePicker(true)}
-              >
-                <Text style={styles.dateButtonText}>
-                  {formatDateToYMD(selectedDate)}
-                </Text>
-              </TouchableOpacity>
-              {showDatePicker && (
-                <DateTimePicker
-                  value={selectedDate}
-                  mode="date"
-                  display="calendar"
-                  onChange={onDateChange}
-                />
-              )}
-            </>
-          )}
-        </View>
+        
       </View>
 
       {/* LOCATION CARDS */}
       <View style={styles.featuresGrid}>
         {featuresData.map((feature, index) => {
+          const locationOpen = isLocationOpen(feature, currentTime);
           const { isHovered, hoverProps } = useHover();
-          const locationOpen = isLocationOpen(feature.title, selectedDate);
+
           return (
             <TouchableOpacity
               key={index}
@@ -317,7 +250,6 @@ export default function LocationScreen() {
     </ScrollView>
   );
 }
-
 const styles = StyleSheet.create({
   container: {
     flex: 1,
@@ -352,7 +284,7 @@ const styles = StyleSheet.create({
   // Thick underline style using borderBottom for active or hovered nav items
   navTextActive: {
     borderBottomWidth: 5,
-    borderBottomColor: 'rgb(198, 2, 2)',
+    borderBottomColor: "rgb(198, 2, 2)",
     paddingBottom: 2,
     borderRadius: 5,
   },
@@ -407,7 +339,7 @@ const styles = StyleSheet.create({
     width: 16,
     height: 16,
     borderRadius: 16,
-    backgroundColor: 'rgb(198, 2, 2)',
+    backgroundColor: "rgb(198, 2, 2)",
   },
   pointerBubble: {
     position: "absolute",
@@ -452,13 +384,13 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: "600",
   },
-   // Section Title styling
-   sectionTitle: {
+  // Section Title styling
+  sectionTitle: {
     paddingTop: 40,
     fontSize: 46,
     fontWeight: "bold",
     marginBottom: 25,
-    color: 'rgb(198, 2, 2)',
+    color: "rgb(198, 2, 2)",
     textAlign: "center",
   },
   // Feature Cards styling
@@ -484,20 +416,20 @@ const styles = StyleSheet.create({
     borderColor: "green",
   },
   closedCard: {
-    borderColor: 'rgb(198, 2, 2)',
+    borderColor: "rgb(198, 2, 2)",
   },
   closedTag: {
     position: "absolute",
     top: 10,
     right: 10,
-    backgroundColor: 'rgb(198, 2, 2)',
+    backgroundColor: "rgb(198, 2, 2)",
     color: "white",
     fontWeight: "bold",
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 20,
     fontSize: 16,
-    borderColor: 'rgb(198, 2, 2)',
+    borderColor: "rgb(198, 2, 2)",
     borderWidth: 2,
     zIndex: 1000,
   },

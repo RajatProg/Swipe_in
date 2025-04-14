@@ -66,11 +66,11 @@ export const styles = StyleSheet.create({
     backgroundImage: {
       width: '100%',
       resizeMode: 'cover',
-      height: 750,
+      height: 700,
       shadowColor: '#000',
       shadowOffset: { width: 7, height: 7 },
       shadowOpacity: 0.2,
-      shadowRadius: 4
+      shadowRadius: 1
     },
   
     title: {

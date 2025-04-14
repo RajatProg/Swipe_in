@@ -4,15 +4,17 @@ import {
   View,
   TouchableOpacity,
   ScrollView,
-  ImageBackground
+  ImageBackground,
+  StyleSheet
 } from 'react-native';
 import Icon from 'react-native-vector-icons/FontAwesome';
 import { Image } from 'expo-image';
 import { useHover } from '@react-native-aria/interactions';
-import { styles } from './styles/Homestyles';
 import { useNavigation, useRoute } from "@react-navigation/native";
+import { Video } from 'expo-av';
+import { styles } from './styles/Homestyles';
 
-const PlaceholderImage = require('@/assets/images/dining2.jpg');
+const Placeholdervideo = require('@/assets/images/video.mov');
 const MealPlanImage = require('@/assets/images/chef1.jpg');
 const FeatureImages = [
   require('@/assets/images/meals1.jpg'),
@@ -47,7 +49,6 @@ const featuresData = [
   }
 ];
 
-
 type NavLinkProps = {
   label: string;
   route: string;
@@ -67,7 +68,7 @@ function NavLink({ label, route, isActive, onPress }: NavLinkProps) {
 
 export default function HomePage() {
   const navigation = useNavigation();
-  const route = useRoute(); // Get the current route
+  const route = useRoute();
   
   const scrollRef = useRef<ScrollView>(null);
   const mealRef = useRef<View>(null);
@@ -88,6 +89,7 @@ export default function HomePage() {
       });
     }
   };
+
   const navItems = [
     { label: 'Home', route: 'index' },
     { label: 'Menu', route: 'Locations' },
@@ -97,8 +99,15 @@ export default function HomePage() {
 
   return (
     <ScrollView ref={scrollRef} showsHorizontalScrollIndicator={false}>
-      <ImageBackground source={PlaceholderImage} style={styles.backgroundImage} blurRadius={1}>
-        <View style={styles.background}>
+
+      <View style={{ position: 'relative', height: 750, width: '100%' }}>        <Video
+          source={Placeholdervideo}
+          style={[styles.backgroundImage, StyleSheet.absoluteFill]}
+          shouldPlay
+          isLooping
+          isMuted
+        />
+        
           <View ref={index} style={styles.navbar}>
             <Image
               source={require('@/assets/images/swipein_1.png')}
@@ -110,14 +119,13 @@ export default function HomePage() {
                   key={idx}
                   label={navItem.label}
                   route={navItem.route}
-                  // Active if the current route matches the nav item's route.
                   isActive={route.name === navItem.route}
                   onPress={() => navigation.navigate(navItem.route as never)}
                 />
               ))}
             </View>
           </View>
-          <View style={styles.container}>
+          
             <Text style={styles.title}>Swipe In</Text>
             <Text style={styles.subtitle}>
               One-step platform for a seamless Dine-in experience.
@@ -128,9 +136,7 @@ export default function HomePage() {
               </TouchableOpacity>
             </View>
           </View>
-        </View>
-      </ImageBackground>
-
+      
       <View>
         <Text style={styles.featurename}>New Features</Text>
         <View style={styles.featuresGrid}>
@@ -147,11 +153,11 @@ export default function HomePage() {
                 )}
                 <View style={styles.feature}>
                   <Text style={styles.featureTitle}>{feature.title}</Text>
-                  {isHovered ? (
+                  {isHovered && (
                     <Text style={styles.featureDescription}>
                       {feature.description}
                     </Text>
-                  ) : null}
+                  )}
                 </View>
               </View>
             );
@@ -159,6 +165,7 @@ export default function HomePage() {
         </View>
       </View>
 
+      {/* REMAINING SECTIONS (Meal Plan, Cards, Footer, etc.) */}
       <View style={styles.meal}>
         <Text style={styles.mainHeading}>Meal Plan Information</Text>
         <View style={styles.headingUnderline} />
