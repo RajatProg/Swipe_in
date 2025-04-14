@@ -6,8 +6,8 @@ export  const cfaImages: Record<string, any> = {
     "Chick-fil-A Waffle Potato Fries® - Small": require('../../assets/images/fries_small.png'),
     "Chick-fil-A Waffle Potato Fries® - Large": require('../../assets/images/large_fries.jpeg'),
     "Fruit Cup": require('../../assets/images/fruit.png'),
-    "Cookies & Cream Milkshake": require('../../assets/images/CFA_Deluxe.png'),
-    "Strawberry Milkshake": require('../../assets/images/regular.png'),
+    "Cookies & Cream Milkshake": require('../../assets/images/cookie.png'),
+    "Strawberry Milkshake": require('../../assets/images/strawberry.png'),
     "Vanilla Milkshake (Lg)": require('../../assets/images/milkshake.png'),
     "Icedream": require('../../assets/images/icedream.png'),
 

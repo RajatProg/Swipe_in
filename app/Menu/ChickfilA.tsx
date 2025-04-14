@@ -6,16 +6,14 @@ import {
   TouchableOpacity,
   Image,
   ActivityIndicator,
-  TextInput,
-  Platform,
+  
   StyleSheet,
-  LayoutChangeEvent,
-  ImageBackground,
+  
 } from "react-native";
-import DateTimePicker from "@react-native-community/datetimepicker";
-import { useNavigation } from "@react-navigation/native";
+import { useNavigation, useRoute } from "@react-navigation/native";
 import { cfaImages } from "../styles/cfa_images";
 
+// Data shape from your CFA API
 type MenuAPIItem = {
   menu_id: number;
   item_title: string;
@@ -66,10 +64,22 @@ const useHover = () => {
   return { hoverProps, isHovered };
 };
 
-//
-// Component: CategorySection
-// Extracted so that useHover is called at the top level of this component,
-// ensuring consistent hook order.
+type NavLinkProps = {
+  label: string;
+  route: string;
+  isActive: boolean;
+  onPress: () => void;
+};
+function NavLink({ label, route, isActive, onPress }: NavLinkProps) {
+  const { isHovered, hoverProps } = useHover();
+  const activeStyle = (isHovered || isActive) ? localStyles.navTextActive : {};
+  return (
+    <TouchableOpacity onPress={onPress} style={localStyles.navItem} {...hoverProps}>
+      <Text style={[localStyles.navText, activeStyle]}>{label}</Text>
+    </TouchableOpacity>
+  );
+}
+
 //
 type CategorySectionProps = {
   cat: string;
@@ -78,10 +88,15 @@ type CategorySectionProps = {
   toggleCategory: (cat: string) => void;
 };
 
-function CategorySection({ cat, itemsForCat, expandedCategory, toggleCategory }: CategorySectionProps) {
+function CategorySection({
+  cat,
+  itemsForCat,
+  expandedCategory,
+  toggleCategory,
+}: CategorySectionProps) {
   const { hoverProps, isHovered } = useHover();
-  // If this category is either hovered or currently expanded, add underline style.
-  const underlineStyle = expandedCategory === cat || isHovered ? localStyles.categoryHeaderActive : null;
+  const underlineStyle =
+    expandedCategory === cat || isHovered ? localStyles.categoryHeaderActive : null;
   
   return (
     <View style={localStyles.categorySection}>
@@ -110,12 +125,12 @@ function CategorySection({ cat, itemsForCat, expandedCategory, toggleCategory }:
 
 export default function MenuItemsScreen() {
   const navigation = useNavigation();
+  const route = useRoute();
 
   const [menuData, setMenuData] = useState<MenuItem[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Only one category expanded at a time.
   const [expandedCategory, setExpandedCategory] = useState<string | null>(null);
 
   useEffect(() => {
@@ -152,42 +167,56 @@ export default function MenuItemsScreen() {
     fetchMenuData();
   }, []);
 
-  // Toggle a category. If the same is selected, collapse it; otherwise, expand the new one.
   const toggleCategory = (cat: string) => {
     setExpandedCategory((prev) => (prev === cat ? null : cat));
   };
+
+
+  const navItems = [
+    { label: "Home", route: "index" },
+    { label: "Menu", route: "Locations" },
+    { label: "About", route: "about" },
+    { label: "Login/Register", route: "Login" },
+  ];
 
   return (
     <View style={localStyles.container}>
       {/* NAVIGATION BAR */}
       <View style={localStyles.navbar}>
-       <TouchableOpacity onPress={() => navigation.navigate("index" as never)}>
-                 <Image
-                   source={require("@/assets/images/swipein_1.png")}
-                   style={localStyles.navbarLogo}
-                 />
-               </TouchableOpacity>
+        <TouchableOpacity onPress={() => navigation.navigate("index" as never)}>
+          <Image
+            source={require("@/assets/images/swipein_1.png")}
+            style={localStyles.navbarLogo}
+          />
+        </TouchableOpacity>
         <View style={localStyles.navLinks}>
-          {[
-            { label: "Home", route: "index" },
-            { label: "Menu", route: "Locations" },
-            { label: "About", route: "about" },
-            { label: "Login/Register", route: "Login" },
-          ].map((navItem, idx) => (
-            <TouchableOpacity key={idx} style={localStyles.navItem} onPress={() => navigation.navigate(navItem.route as never)}>
-              <Text style={localStyles.navText}>{navItem.label}</Text>
-            </TouchableOpacity>
-          ))}
-        </View>
+                  {navItems.map((navItem, idx) => (
+                    <NavLink
+                      key={idx}
+                      label={navItem.label}
+                      route={navItem.route}
+                      // Determine active state using the current route name
+                      isActive={route.name === navItem.route}
+                      onPress={() => navigation.navigate(navItem.route as never)}
+                    />
+                  ))}
+                </View>
       </View>
+      
 
-      {/* CENTERED HEADER WITH CFA LOGO */}
       <View style={centerHeaderStyles.header}>
-        <Image source={require("../../assets/images/CFA_Logo.svg")} style={centerHeaderStyles.logo} resizeMode="contain" />
+        <Image
+          source={require("../../assets/images/CFA_Logo.svg")}
+          style={centerHeaderStyles.logo}
+          resizeMode="contain"
+        />
       </View>
-
+      
       {/* Menu Items Grouped by Category */}
-      <ScrollView style={localStyles.menuContainer} contentContainerStyle={{ paddingBottom: 60 , paddingTop: 20}}>
+      <ScrollView
+        style={localStyles.menuContainer}
+        contentContainerStyle={{ paddingBottom: 60, paddingTop: 20 }}
+      >
         {loading ? (
           <ActivityIndicator size="large" color="#0000ff" />
         ) : error ? (
@@ -212,23 +241,25 @@ export default function MenuItemsScreen() {
   );
 }
 
+//
+// Centered header styles
+//
 const centerHeaderStyles = StyleSheet.create({
   header: {
     alignItems: "center",
     justifyContent: "center",
-    marginTop: 1,
-    marginBottom: 1,
+    marginTop: 20,
+    marginBottom: 20,
   },
   logo: {
     width: "100%",
     height: 120,
-    marginBottom: 20,
-    marginTop: 20,
-    backgroundColor: "white",
-    
   },
 });
 
+//
+// Local styles used in this CFA screen
+//
 const localStyles = StyleSheet.create({
   container: {
     flex: 1,
@@ -240,7 +271,6 @@ const localStyles = StyleSheet.create({
     justifyContent: "space-between",
     alignItems: "center",
     flexWrap: "wrap",
-  
   },
   navbarLogo: {
     width: 100,
@@ -250,6 +280,7 @@ const localStyles = StyleSheet.create({
   },
   navLinks: {
     flexDirection: "row",
+    marginRight: 40,
   },
   navItem: {
     marginHorizontal: 40,
@@ -259,6 +290,13 @@ const localStyles = StyleSheet.create({
     fontWeight: "bold",
     fontSize: 16,
     marginHorizontal: 10,
+  },
+  // Underline style for navlinks when active or hovered
+  navTextActive: {
+    borderBottomWidth: 5,
+    borderBottomColor: "rgb(198, 2, 2)",
+    paddingBottom: 2,
+    borderRadius: 5,
   },
   // Menu Container
   menuContainer: {
@@ -278,12 +316,11 @@ const localStyles = StyleSheet.create({
   },
   categoryHeaderActive: {
     borderBottomWidth: 9,
-    borderBottomColor: "red",
-    
+    borderBottomColor: "red",   
     padding: 4,
     borderRadius: 20,
     backgroundColor: "#f5f5f5",
-    marginHorizontal: 715,
+    marginHorizontal: 690,
     
   },
   categoryItemsGrid: {
@@ -311,12 +348,12 @@ const localStyles = StyleSheet.create({
     alignItems: "center",
   },
   itemName: {
-    fontSize: 14,
+    fontSize: 16,
     fontWeight: "600",
     color: "#000",
   },
   calories: {
-    fontSize: 12,
+    fontSize: 14,
     color: "#666",
     marginTop: 4,
   },
@@ -329,3 +366,5 @@ const localStyles = StyleSheet.create({
     fontWeight: "700",
   },
 });
+
+export { MenuItemsScreen };

@@ -58,7 +58,7 @@ export const styles = StyleSheet.create({
 
     navTextActive: {
       borderBottomWidth: 5,
-      borderBottomColor: "brown",
+      borderBottomColor: 'rgb(198, 2, 2)',
       paddingBottom: 2,
       borderRadius: 5,
     },

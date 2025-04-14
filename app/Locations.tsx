@@ -99,11 +99,11 @@ const featuresData = [
     description: "Famous for their chicken sandwiches.",
     hoverHours: `Regular Hours
 
-Monday - Thursday :   10:30 AM - 04:00 PM
+Monday - Thursday :  10:30 AM - 04:00 PM
 
-Friday :     10:30 AM - 02:00 PM
-
-Saturday - Sunday :   Closed`,
+                      Friday :  10:30 AM - 02:00 PM 
+           
+Saturday - Sunday :  Closed`,
     image: require("../assets/images/cfa_local.jpg"),
   },
   {
@@ -115,17 +115,16 @@ Everyday
 
   Breakfast : 07:00 AM - 12:00 PM
 
-  Lunch : 12:00 AM - 03:30 PM
+       Lunch : 12:00 AM - 03:30 PM
 
-  Dinner : 04:30 PM - 10:00 PM`,
+      Dinner : 04:30 PM - 10:00 PM`,
     image: require("../assets/images/dine.jpg"),
   },
 ];
 
 export default function LocationScreen() {
   const navigation = useNavigation();
-  const route = useRoute(); // Get the current route
-  // Define the nav items with route names that match your navigation configuration.
+  const route = useRoute(); 
   const navItems = [
     { label: "Home", route: "index" },
     { label: "Menu", route: "Locations" },
@@ -353,7 +352,7 @@ const styles = StyleSheet.create({
   // Thick underline style using borderBottom for active or hovered nav items
   navTextActive: {
     borderBottomWidth: 5,
-    borderBottomColor: "brown",
+    borderBottomColor: 'rgb(198, 2, 2)',
     paddingBottom: 2,
     borderRadius: 5,
   },
@@ -408,7 +407,7 @@ const styles = StyleSheet.create({
     width: 16,
     height: 16,
     borderRadius: 16,
-    backgroundColor: "maroon",
+    backgroundColor: 'rgb(198, 2, 2)',
   },
   pointerBubble: {
     position: "absolute",
@@ -453,15 +452,16 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: "600",
   },
-  sectionTitle: {
+   // Section Title styling
+   sectionTitle: {
     paddingTop: 40,
     fontSize: 46,
     fontWeight: "bold",
     marginBottom: 25,
-    color: "brown",
+    color: 'rgb(198, 2, 2)',
     textAlign: "center",
   },
-  // Feature Cards styles
+  // Feature Cards styling
   featuresGrid: {
     flexDirection: "row",
     justifyContent: "space-evenly",
@@ -484,20 +484,20 @@ const styles = StyleSheet.create({
     borderColor: "green",
   },
   closedCard: {
-    borderColor: "red",
+    borderColor: 'rgb(198, 2, 2)',
   },
   closedTag: {
     position: "absolute",
     top: 10,
     right: 10,
-    backgroundColor: "red",
+    backgroundColor: 'rgb(198, 2, 2)',
     color: "white",
     fontWeight: "bold",
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 20,
     fontSize: 16,
-    borderColor: "red",
+    borderColor: 'rgb(198, 2, 2)',
     borderWidth: 2,
     zIndex: 1000,
   },
@@ -545,5 +545,3 @@ const styles = StyleSheet.create({
     fontWeight: "500",
   },
 });
-
-export { NavLink };

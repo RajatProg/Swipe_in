@@ -47,10 +47,7 @@ const featuresData = [
   }
 ];
 
-//
-// Custom NavLink Component to implement the underline effect.
-// It underlines when the text is hovered (web) or when the link is active (i.e. the current route).
-//
+
 type NavLinkProps = {
   label: string;
   route: string;
@@ -91,8 +88,6 @@ export default function HomePage() {
       });
     }
   };
-
-  // Define your navigation items; ensure the route strings match those in your router.
   const navItems = [
     { label: 'Home', route: 'index' },
     { label: 'Menu', route: 'Locations' },
