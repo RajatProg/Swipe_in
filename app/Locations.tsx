@@ -22,7 +22,6 @@ function useHover() {
   return { isHovered, hoverProps };
 }
 
-// NavLink component that underlines when hovered or active.
 type NavLinkProps = {
   label: string;
   route: string;
@@ -76,7 +75,7 @@ function isLocationOpen(feature: any, time: Date): boolean {
       (interval) => totalMinutes >= interval.start && totalMinutes < interval.end
     );
   }
-  // Default: return closed for any unknown feature.
+
   return false;
 }
 
@@ -119,7 +118,6 @@ export default function LocationScreen() {
     { label: "Login/Register", route: "Login" },
   ];
 
-  // Using the live current time (updating every minute)
   const [currentTime, setCurrentTime] = useState<Date>(new Date());
   const [timelineWidth, setTimelineWidth] = useState<number>(0);
 

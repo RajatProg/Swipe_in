@@ -58,13 +58,13 @@ const paymentMethods = [
   "Employee Meal",
 ];
 
-// Create date at local noon from "YYYY-MM-DD"
+// The previous functions to create dates at noon are still here for reference,
+// but we now want to use the full local date rather than forcing noon.
 function createLocalNoonDate(dateString: string): Date {
   const [year, month, day] = dateString.split("-").map(Number);
   return new Date(year, month - 1, day, 12, 0, 0);
 }
 
-// Create today's date at local noon
 function createLocalNoonDateForToday(): Date {
   const now = new Date();
   return new Date(now.getFullYear(), now.getMonth(), now.getDate(), 12, 0, 0);
@@ -81,9 +81,8 @@ export default function DiningScreen() {
   // Filter states
   const [selectedCategory, setSelectedCategory] = useState("Breakfast");
   const [selectedDiet, setSelectedDiet] = useState("All");
-  const [selectedDate, setSelectedDate] = useState<Date>(
-    createLocalNoonDateForToday()
-  );
+  // Instead of forcing the selected date to noon, we initialize it with the current date
+  const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [showDatePicker, setShowDatePicker] = useState(false);
 
   const [currentTime, setCurrentTime] = useState<Date>(new Date());
@@ -148,7 +147,7 @@ export default function DiningScreen() {
     }
   }, [currentTime]);
 
-  // DateTimePicker
+  // DateTimePicker Helpers: format date as YYYY-MM-DD for filtering
   function formatDateToYMD(d: Date): string {
     const y = d.getFullYear();
     const m = String(d.getMonth() + 1).padStart(2, "0");
@@ -157,28 +156,25 @@ export default function DiningScreen() {
   }
   const filterDateStr = formatDateToYMD(selectedDate);
 
-  // Native date => local noon
+  // --- Update Native Date Picker Handler ---
+  // Instead of converting the date to noon, use the selected date as-is.
   const onDateChange = (event: DateTimePickerEvent, date?: Date) => {
     if (Platform.OS !== "web") {
       setShowDatePicker(false);
     }
     if (date) {
-      const forcedNoon = new Date(
-        date.getFullYear(),
-        date.getMonth(),
-        date.getDate(),
-        12,
-        0,
-        0
-      );
-      setSelectedDate(forcedNoon);
+      console.log("New selected date (native):", date.toString());
+      setSelectedDate(date);
     }
   };
 
-  // Web date => local noon
+  // --- Update Web Date Picker Handler ---
+  // Parse the "YYYY-MM-DD" value manually, so it is created in local time.
   const handleWebDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const forcedNoon = createLocalNoonDate(e.target.value);
-    setSelectedDate(forcedNoon);
+    const [year, month, day] = e.target.value.split("-").map(Number);
+    const localDate = new Date(year, month - 1, day);
+    console.log("Web date selected (local):", localDate.toString());
+    setSelectedDate(localDate);
   };
 
   // Filter Items
@@ -330,7 +326,9 @@ export default function DiningScreen() {
                   ]}
                 />
                 {/* small circle knob on the line */}
-                <View style={[styles.pointerKnob, { left: pointerLeft - 5 }]} />
+                <View
+                  style={[styles.pointerKnob, { left: pointerLeft - 5 }]}
+                />
                 {/* black bubble above it with white text */}
                 <View
                   style={[styles.pointerBubble, { left: pointerLeft - 30 }]}
@@ -516,99 +514,86 @@ function PaymentPrompt({
   const [showSuccess, setShowSuccess] = useState(false);
 
   const handleStoreTransaction = async () => {
-
     if (method === "Meal Swipes" || method === "Flex Dollars") {
-        try {
-          // a) Check if MNumber exists
-          const swipeRes = await fetch(`http://127.0.0.1:8081/swipe/${mnumber}`, {
-            method: "GET",
-            headers: { "Content-Type": "application/json" },
-          });
-          if (!swipeRes.ok) {
-            window.alert("Mustang Number doesn't exist, please try again.");
-            return;
-          }
-    
-          const swipeData = await swipeRes.json();
-      
-      
-          const paymentdata = {
-            mnumber: mnumber,
-            total: finalTotal,
-            method: method,
-          };
-          const payRes = await fetch("http://127.0.0.1:8081/payments/", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(paymentdata),
-          });
-    
-    
-          if (method === "Meal Swipes") 
-            {
-            if (swipeData.meal_swipes_left <= 0)
-              {
-                window.alert("You are out of swipes. Please recharge your swipes.");
-                return;
-              }
-    
-              else
-              {
-                payRes
-              }
-            
-            
-          } else if (method === "Flex Dollars") {
-            if (swipeData.flex_dollars_left < finalTotal) {
-              window.alert("You do not have enough flex dollars. Please add more money.");
-              return;
-            }
-    
-            else 
-            {
-              payRes
-            }
-          }
-    
-          if (!payRes.ok) {
-            window.alert("Error !! Payment failed.");
-            return;
-          }
-        } catch (error: any) {
-          window.alert("Error processing payment: " + error.message);
+      try {
+        // a) Check if MNumber exists
+        const swipeRes = await fetch(`http://127.0.0.1:8081/swipe/${mnumber}`, {
+          method: "GET",
+          headers: { "Content-Type": "application/json" },
+        });
+        if (!swipeRes.ok) {
+          window.alert("Mustang Number doesn't exist, please try again.");
           return;
         }
-      }
 
-      const transactionData = {
-        username: username,
-        transaction_date: new Date().toISOString(),
-        transaction_mode: method,
-        transaction_id: uuid.v4(),
-        is_successful: true,
-        Location: "Mesquite Dining Hall",
-        Total_Amount: finalTotal,
-        MNumber: mnumber,
-        first_name: first_name,
-      };
-      
-      try {
-        const res = await fetch("http://127.0.0.1:8081/transaction/", {
+        const swipeData = await swipeRes.json();
+
+        const paymentdata = {
+          mnumber: mnumber,
+          total: finalTotal,
+          method: method,
+        };
+        const payRes = await fetch("http://127.0.0.1:8081/payments/", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(transactionData),
+          body: JSON.stringify(paymentdata),
         });
-        if (!res.ok) {
-          throw new Error("Transaction DB insert failed");
+
+        if (method === "Meal Swipes") {
+          if (swipeData.meal_swipes_left <= 0) {
+            window.alert("You are out of swipes. Please recharge your swipes.");
+            return;
+          } else {
+            payRes;
+          }
+        } else if (method === "Flex Dollars") {
+          if (swipeData.flex_dollars_left < finalTotal) {
+            window.alert("You do not have enough flex dollars. Please add more money.");
+            return;
+          } else {
+            payRes;
+          }
+        }
+
+        if (!payRes.ok) {
+          window.alert("Error !! Payment failed.");
+          return;
         }
       } catch (error: any) {
-        window.alert("Error storing transaction: " + error.message);
+        window.alert("Error processing payment: " + error.message);
         return;
       }
-      
-      showSuccessAndClose();
-      
+    }
+
+    const transactionData = {
+      username: username,
+      transaction_date: new Date().toISOString(),
+      transaction_mode: method,
+      transaction_id: uuid.v4(),
+      is_successful: true,
+      Location: "Mesquite Dining Hall",
+      Total_Amount: finalTotal,
+      MNumber: mnumber,
+      first_name: first_name,
+    };
+
+    try {
+      const res = await fetch("http://127.0.0.1:8081/transaction/", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(transactionData),
+      });
+      if (!res.ok) {
+        throw new Error("Transaction DB insert failed");
+      }
+    } catch (error: any) {
+      window.alert("Error storing transaction: " + error.message);
+      return;
+    }
+
+    showSuccessAndClose();
   };
+
   function showSuccessAndClose() {
     setShowSuccess(true);
 

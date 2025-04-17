@@ -68,16 +68,17 @@ export const styles = StyleSheet.create({
       resizeMode: 'cover',
       height: 700,
       shadowColor: '#000',
-      shadowOffset: { width: 7, height: 7 },
+      shadowOffset: { width: 11, height: 7 },
       shadowOpacity: 0.2,
-      shadowRadius: 1
+      shadowRadius: 10
     },
   
     title: {
-      fontSize: 38,
+      fontSize: 40,
       color: 'rgba(255, 255, 255, 0.98)',
       textAlign: 'center',
       marginBottom: 10,
+      marginTop: 100,
       padding : 15,
       fontWeight: 'bold'
   

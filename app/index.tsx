@@ -100,7 +100,8 @@ export default function HomePage() {
   return (
     <ScrollView ref={scrollRef} showsHorizontalScrollIndicator={false}>
 
-      <View style={{ position: 'relative', height: 750, width: '100%' }}>        <Video
+      <View style={{ position: 'relative', height: 750, width: '100%' }}>        
+        <Video
           source={Placeholdervideo}
           style={[styles.backgroundImage, StyleSheet.absoluteFill]}
           shouldPlay
