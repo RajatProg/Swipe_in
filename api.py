@@ -305,9 +305,16 @@ def delete_user(username: str, db: Session = Depends(get_db)):
     user = db.query(User).filter(User.username == username).first()
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
+
+    swipes = db.query(Swipes).filter(Swipes.username == username).first()
+
+    if swipes:
+        db.delete(swipes)
+
     db.delete(user)
     db.commit()
-    return {"message": f"User {username} deleted successfully"}
+
+    return {"message": f"User {username} and associated swipes record deleted."}
 
 
 @app.put("/users/{username}", response_model=UserResponseModel)

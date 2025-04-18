@@ -38,7 +38,7 @@ export default function ProfileSelection() {
             ]}
             onHoverIn={() => setHoveredCard("admin")}
             onHoverOut={() => setHoveredCard(null)}
-            onPress={() => navigation.navigate("Profiles/Admin" as never)}
+            onPress={() => navigation.navigate("Admin" as never)}
           >
             <Ionicons name="person" size={60} color="black" />
             <Text style={{ color: "black", fontWeight: "bold", marginTop: 10, fontSize: 20 }}>
