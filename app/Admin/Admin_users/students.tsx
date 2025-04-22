@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect } from "react";
 import {
   View,
   Text,
@@ -6,156 +6,218 @@ import {
   TouchableOpacity,
   FlatList,
   Modal,
-  ScrollView
-} from 'react-native';
-import { styles } from '../admin_styles/manage_user';
-import { Ionicons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
-import axios from 'axios';
+  ScrollView,
+} from "react-native";
+import { styles } from "../admin_styles/manage_user";
+import { Ionicons } from "@expo/vector-icons";
+import { useRouter } from "expo-router";
+import axios from "axios";
 
-type UserType = {
+/* ---------- types ---------- */
+type Student = {
   username: string;
   first_name: string;
   last_name: string;
   email: string;
-  role: string;
-  password: string;
+  meal_plan: "Platinum" | "Gold" | "Silver" | "Bronze";
+  meal_swipes: number;
+  flex_dollars: number;
+};
+
+/* valid plan values */
+const PLAN_CHOICES = ["Platinum", "Gold", "Silver", "Bronze"] as const;
+
+/* plan → default totals */
+const PLAN_DEFAULTS = {
+  Platinum: { meal_swipes: 600, flex_dollars: 100 },
+  Gold: { meal_swipes: 200, flex_dollars: 100 },
+  Silver: { meal_swipes: 150, flex_dollars: 100 },
+  Bronze: { meal_swipes: 75, flex_dollars: 100 },
+} as const;
+
+/* default form state */
+const defaultForm: Student = {
+  username: "",
+  first_name: "",
+  last_name: "",
+  email: "",
+  meal_plan: "Gold",
+  meal_swipes: 0,
+  flex_dollars: 0,
 };
 
 export default function Students() {
-  const [searchText, setSearchText] = useState('');
-  const [users, setUsers] = useState<UserType[]>([]);
-  const [modalVisible, setModalVisible] = useState(false);
-  const [addModalVisible, setAddModalVisible] = useState(false);
-  const [editModalVisible, setEditModalVisible] = useState(false);
-  const [userToDelete, setUserToDelete] = useState<string | null>(null);
-  const [editUser, setEditUser] = useState<UserType | null>(null);
-  const [formData, setFormData] = useState({
-    username: '',
-    first_name: '',
-    last_name: '',
-    email: '',
-    password: '',
-    role: 'STUDENT',
-  });
-  const [formError, setFormError] = useState('');
+  const [searchText, setSearchText] = useState("");
+  const [students, setStudents] = useState<Student[]>([]);
+  const [suggestions, setSuggestions] = useState<string[]>([]);
+
+  /* modal state */
+  const [deleteModal, setDeleteModal] = useState(false);
+  const [addModal, setAddModal] = useState(false);
+  const [editModal, setEditModal] = useState(false);
+
+  const [studentToDelete, setStudentToDelete] = useState<string | null>(null);
+  const [editTarget, setEditTarget] = useState<Student | null>(null);
+
+  /* form state */
+  const [formData, setFormData] = useState(defaultForm);
+  const [formError, setFormError] = useState("");
+
   const router = useRouter();
 
+  /* fetch list from Meals */
   useEffect(() => {
-    fetchUsers();
+    fetchStudents();
   }, []);
-
-  const fetchUsers = async () => {
+  const fetchStudents = async () => {
     try {
-      const resp = await axios.get<UserType[]>('http://127.0.0.1:8081/users/');
-      // only students
-      setUsers(resp.data.filter(u => u.role === 'STUDENT'));
+      const { data } = await axios.get<Student[]>(
+        "http://127.0.0.1:8081/student_users/"
+      );
+      setStudents(data);
     } catch (e) {
-      console.error('Failed to fetch students:', e);
+      console.error("Failed to fetch students:", e);
     }
   };
 
-  const openDeleteModal = (username: string) => {
-    setUserToDelete(username);
-    setModalVisible(true);
-  };
-  const cancelDelete = () => {
-    setModalVisible(false);
-    setUserToDelete(null);
-  };
-  const handleDelete = async () => {
-    if (!userToDelete) return;
-    try {
-      const resp = await fetch(`http://127.0.0.1:8081/users/${userToDelete}`, { method: 'DELETE' });
-      if (resp.ok) fetchUsers();
-    } catch (e) {
-      console.error('Delete failed:', e);
-    } finally {
-      cancelDelete();
-    }
-  };
-
-  const openAddModal = () => {
-    setFormData({
-      username: '',
-      first_name: '',
-      last_name: '',
-      email: '',
-      password: '',
-      role: 'STUDENT',
-    });
-    setFormError('');
-    setAddModalVisible(true);
-  };
-  const openEditModal = (u: UserType) => {
-    setEditUser(u);
-    setFormData({ ...u });
-    setFormError('');
-    setEditModalVisible(true);
-  };
-
-  const handleAdd = async () => {
-    const { username, first_name, last_name, email, password } = formData;
-    if (!username || !first_name || !last_name || !email || !password) {
-      setFormError('All fields are required');
+  /* build suggestions whenever searchText or students changes */
+  useEffect(() => {
+    if (!searchText) {
+      setSuggestions([]);
       return;
     }
+    const matches = students
+      .map((s) => s.username)
+      .filter((u) => u.toLowerCase().startsWith(searchText.toLowerCase()))
+      .slice(0, 5);
+    setSuggestions(matches);
+  }, [searchText, students]);
+
+  /* placeholder for voice search */
+  const handleVoiceSearch = () => {
+    console.log("🎤 voice search not yet implemented");
+  };
+
+  /* delete student */
+  const confirmDelete = (username: string) => {
+    setStudentToDelete(username);
+    setDeleteModal(true);
+  };
+  const handleDelete = async () => {
+    if (!studentToDelete) return;
     try {
-      const resp = await fetch('http://127.0.0.1:8081/register/', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+      const resp = await fetch(
+        `http://127.0.0.1:8081/student_users/${studentToDelete}`,
+        { method: "DELETE" }
+      );
+      if (resp.ok) fetchStudents();
+    } catch (e) {
+      console.error("Delete failed:", e);
+    } finally {
+      setDeleteModal(false);
+      setStudentToDelete(null);
+    }
+  };
+
+  /* open Add modal */
+  const openAdd = () => {
+    setFormData(defaultForm);
+    setFormError("");
+    setAddModal(true);
+  };
+
+  /* open Edit modal */
+  const openEdit = (s: Student) => {
+    setEditTarget(s);
+    setFormData(s);
+    setFormError("");
+    setEditModal(true);
+  };
+
+  /* validate name/email */
+  const validateForm = () => {
+    const { username, first_name, last_name, email } = formData;
+    if (!username || !first_name || !last_name || !email) {
+      setFormError("All fields are required");
+      return false;
+    }
+    setFormError("");
+    return true;
+  };
+
+  /* ADD student */
+  const handleAdd = async () => {
+    if (!validateForm()) return;
+    try {
+      const resp = await fetch("http://127.0.0.1:8081/student/registration/", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify(formData),
       });
       if (resp.ok) {
-        setAddModalVisible(false);
-        fetchUsers();
+        setAddModal(false);
+        fetchStudents();
       } else {
-        setFormError('Add failed');
+        setFormError("Add failed");
       }
     } catch (e) {
-      console.error('Add error:', e);
-    }
-  };
-  const handleUpdate = async () => {
-    if (!editUser) return;
-    const { first_name, last_name, email } = formData;
-    if (!first_name || !last_name || !email) {
-      setFormError('All fields are required');
-      return;
-    }
-    try {
-      const resp = await fetch(`http://127.0.0.1:8081/users/${editUser.username}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...formData, password: editUser.password }),
-      });
-      if (resp.ok) {
-        setEditModalVisible(false);
-        fetchUsers();
-      } else {
-        setFormError('Update failed');
-      }
-    } catch (e) {
-      console.error('Update error:', e);
+      console.error("Add error:", e);
     }
   };
 
-  const filtered = users.filter(u =>
-    [u.username, u.first_name, u.last_name, u.email]
-      .some(f => f.toLowerCase().includes(searchText.toLowerCase()))
+  /* EDIT student */
+  const handleUpdate = async () => {
+    if (!editTarget || !validateForm()) return;
+    try {
+      const resp = await fetch(
+        `http://127.0.0.1:8081/student_users/${editTarget.username}`,
+        {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(formData),
+        }
+      );
+      if (resp.ok) {
+        setEditModal(false);
+        fetchStudents();
+      } else {
+        const err = await resp.json();
+        setFormError(err.detail || "Update failed");
+      }
+    } catch (e) {
+      console.error("Update error:", e);
+      setFormError("Network error");
+    }
+  };
+
+  /* filter by MNumber only */
+  const filtered = students.filter((s) =>
+    s.username.toLowerCase().includes(searchText.toLowerCase())
   );
 
-  const renderUser = ({ item }: { item: UserType }) => (
+  const renderRow = ({ item }: { item: Student }) => (
     <View style={styles.tableRow}>
-      <Text style={[styles.tableCell, styles.usernameColumn]}>{item.username}</Text>
-      <Text style={[styles.tableCell, styles.firstNameColumn]}>{item.first_name}</Text>
-      <Text style={[styles.tableCell, styles.lastNameColumn]}>{item.last_name}</Text>
+      <Text style={[styles.tableCell, styles.usernameColumn]}>
+        {item.username}
+      </Text>
+      <Text style={[styles.tableCell, styles.firstNameColumn]}>
+        {item.first_name}
+      </Text>
+      <Text style={[styles.tableCell, styles.lastNameColumn]}>
+        {item.last_name}
+      </Text>
       <Text style={[styles.tableCell, styles.emailColumn]}>{item.email}</Text>
+      <Text style={[styles.tableCell, styles.planColumn]}>
+        {item.meal_plan}
+      </Text>
       <View style={styles.actionsColumn}>
-        <TouchableOpacity style={styles.editBtn} onPress={() => openEditModal(item)}>
+        <TouchableOpacity style={styles.editBtn} onPress={() => openEdit(item)}>
           <Ionicons name="create-outline" size={18} color="white" />
         </TouchableOpacity>
-        <TouchableOpacity style={styles.deleteBtn} onPress={() => openDeleteModal(item.username)}>
+        <TouchableOpacity
+          style={styles.deleteBtn}
+          onPress={() => confirmDelete(item.username)}
+        >
           <Ionicons name="trash-outline" size={18} color="white" />
         </TouchableOpacity>
       </View>
@@ -164,56 +226,92 @@ export default function Students() {
 
   return (
     <View style={styles.container}>
+      {/* Header */}
       <View style={styles.headerContainer}>
         <Text style={styles.pageTitle}>Manage Students</Text>
-        <TouchableOpacity onPress={() => router.push('Admin' as never)} style={styles.backButton}>
-          <Ionicons name="arrow-back" size={16} color="white" />
-          <Text style={styles.backText}>Admin</Text>
-        </TouchableOpacity>
       </View>
 
       <View style={styles.topBar}>
         <View style={styles.searchContainer}>
-          <Ionicons name="search" size={20} color="#666" style={styles.searchIcon}/>
           <TextInput
             style={styles.searchInput}
-            placeholder="Search students..."
+            placeholder="Search MNumber…"
             value={searchText}
             onChangeText={setSearchText}
           />
+          <TouchableOpacity
+            onPress={() => {
+              /* you could re‑trigger fetch or blur here */
+            }}
+            style={styles.searchIcon}
+          >
+            <Ionicons name="search-outline" size={20} color="#666" />
+          </TouchableOpacity>
         </View>
-        <TouchableOpacity style={styles.addBtn} onPress={openAddModal}>
+        <TouchableOpacity style={styles.addBtn} onPress={openAdd}>
           <Ionicons name="add-circle-outline" size={20} color="white" />
           <Text style={styles.addBtnText}>Add Student</Text>
         </TouchableOpacity>
       </View>
+      {/* Autocomplete suggestions */}
+      {suggestions.length > 0 && (
+        <View style={styles.suggestionsContainer}>
+          {suggestions.map((u) => (
+            <TouchableOpacity
+              key={u}
+              style={styles.suggestionItem}
+              onPress={() => {
+                setSearchText(u);
+                setSuggestions([]);
+              }}
+            >
+              <Text>{u}</Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+      )}
 
+      {/* Table Header */}
       <View style={[styles.tableRow, styles.headerRow]}>
-        <Text style={[styles.tableHeader, styles.usernameColumn]}>Username</Text>
-        <Text style={[styles.tableHeader, styles.firstNameColumn]}>First Name</Text>
-        <Text style={[styles.tableHeader, styles.lastNameColumn]}>Last Name</Text>
-        <Text style={[styles.tableHeader, styles.emailColumn]}>Email</Text>
+        <Text style={[styles.tableHeader, styles.usernameColumn]}>Mustang Number</Text>
+        <Text style={[styles.tableHeader, styles.firstNameColumn]}>
+          First Name
+        </Text>
+        <Text style={[styles.tableHeader, styles.lastNameColumn]}>
+          Last Name
+        </Text>
+        <Text style={[styles.tableHeader, styles.emailColumn]}>Email ID</Text>
+        <Text style={[styles.tableHeader, styles.planColumn]}>Meal Plan</Text>
         <Text style={[styles.tableHeader, styles.actionsColumn]}>Actions</Text>
       </View>
 
       <FlatList
         data={filtered}
-        renderItem={renderUser}
-        keyExtractor={u => u.username}
+        renderItem={renderRow}
+        keyExtractor={(u) => u.username}
       />
 
-      {/* --- Delete Modal --- */}
-      <Modal visible={modalVisible} transparent animationType="fade" onRequestClose={cancelDelete}>
+      {/* Delete Modal */}
+      <Modal
+        visible={deleteModal}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setDeleteModal(false)}
+      >
         <View style={styles.modalOverlay}>
           <View style={styles.modalBox}>
-            <Text style={styles.modalText}>
-              Delete "{userToDelete}"?
-            </Text>
+            <Text style={styles.modalText}>Delete "{studentToDelete}"?</Text>
             <View style={styles.modalActions}>
-              <TouchableOpacity style={styles.cancelBtn} onPress={cancelDelete}>
+              <TouchableOpacity
+                style={styles.cancelBtn}
+                onPress={() => setDeleteModal(false)}
+              >
                 <Text style={styles.cancelTxt}>Cancel</Text>
               </TouchableOpacity>
-              <TouchableOpacity style={styles.confirmBtn} onPress={handleDelete}>
+              <TouchableOpacity
+                style={styles.confirmBtn}
+                onPress={handleDelete}
+              >
                 <Text style={styles.confirmTxt}>Yes</Text>
               </TouchableOpacity>
             </View>
@@ -221,25 +319,97 @@ export default function Students() {
         </View>
       </Modal>
 
-      {/* --- Add Modal --- */}
-      <Modal visible={addModalVisible} transparent animationType="fade" onRequestClose={() => setAddModalVisible(false)}>
+      {/* Add Modal */}
+      <Modal
+        visible={addModal}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setAddModal(false)}
+      >
         <View style={styles.modalOverlay}>
           <View style={styles.modalBox}>
             <ScrollView>
               <Text style={styles.modalTitle}>Add Student</Text>
-              {['username','first_name','last_name','email','password'].map(field => (
+
+              {/* basic info */}
+              {["username", "first_name", "last_name", "email"].map((field) => (
                 <TextInput
                   key={field}
                   style={styles.input}
-                  placeholder={field.replace('_',' ').toUpperCase()}
+                  placeholder={field.replace("_", " ").toUpperCase()}
                   value={(formData as any)[field]}
-                  onChangeText={val => setFormData({ ...formData,[field]: val })}
+                  onChangeText={(val) =>
+                    setFormData({ ...formData, [field]: val })
+                  }
                   autoCapitalize="none"
                 />
               ))}
-              {formError ? <Text style={styles.errorText}>{formError}</Text> : null}
+
+              {/* PLAN CHIPS */}
+              <View style={styles.planPicker}>
+                {PLAN_CHOICES.map((p) => (
+                  <TouchableOpacity
+                    key={p}
+                    style={[
+                      styles.planChip,
+                      formData.meal_plan === p && styles.planChipSelected,
+                    ]}
+                    onPress={() => {
+                      const d = PLAN_DEFAULTS[p];
+                      setFormData({
+                        ...formData,
+                        meal_plan: p,
+                        meal_swipes: d.meal_swipes,
+                        flex_dollars: d.flex_dollars,
+                      });
+                    }}
+                  >
+                    <Text
+                      style={[
+                        styles.planChipTxt,
+                        formData.meal_plan === p && { color: "white" },
+                      ]}
+                    >
+                      {p}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+
+              {/* ONLY TWO FIELDS */}
+              <TextInput
+                style={styles.input}
+                placeholder="Total Swipes"
+                keyboardType="numeric"
+                value={String(formData.meal_swipes)}
+                onChangeText={(val) =>
+                  setFormData({
+                    ...formData,
+                    meal_swipes: Number(val) || 0,
+                  })
+                }
+              />
+              <TextInput
+                style={styles.input}
+                placeholder="Total Flex Dollars"
+                keyboardType="numeric"
+                value={String(formData.flex_dollars)}
+                onChangeText={(val) =>
+                  setFormData({
+                    ...formData,
+                    flex_dollars: Number(val) || 0,
+                  })
+                }
+              />
+
+              {formError ? (
+                <Text style={styles.errorText}>{formError}</Text>
+              ) : null}
               <View style={styles.modalActions}>
-                <TouchableOpacity style={styles.cancelBtn} onPress={() => setAddModalVisible(false)}>
+                <TouchableOpacity
+                  style={styles.cancelBtn}
+                  onPress={() => setAddModal(false)}
+                >
                   <Text style={styles.cancelTxt}>Cancel</Text>
                 </TouchableOpacity>
                 <TouchableOpacity style={styles.confirmBtn} onPress={handleAdd}>
@@ -251,28 +421,111 @@ export default function Students() {
         </View>
       </Modal>
 
-      {/* --- Edit Modal --- */}
-      <Modal visible={editModalVisible} transparent animationType="fade" onRequestClose={() => setEditModalVisible(false)}>
+      {/* Edit Modal */}
+      <Modal
+        visible={editModal}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setEditModal(false)}
+      >
         <View style={styles.modalOverlay}>
           <View style={styles.modalBox}>
             <ScrollView>
               <Text style={styles.modalTitle}>Edit Student</Text>
-              {['first_name','last_name','email'].map(field => (
+
+              {/* ─── Uneditable MNumber ─── */}
+              <TextInput
+                style={[styles.input, { backgroundColor: "#eee" }]}
+                value={formData.username}
+                editable={false}
+                placeholder="MNumber"
+              />
+
+              {/* name & email */}
+              {["first_name", "last_name", "email"].map((field) => (
                 <TextInput
                   key={field}
                   style={styles.input}
-                  placeholder={field.replace('_',' ').toUpperCase()}
+                  placeholder={field.replace("_", " ").toUpperCase()}
                   value={(formData as any)[field]}
-                  onChangeText={val => setFormData({ ...formData,[field]: val })}
+                  onChangeText={(val) =>
+                    setFormData({ ...formData, [field]: val })
+                  }
                   autoCapitalize="none"
                 />
               ))}
-              {formError ? <Text style={styles.errorText}>{formError}</Text> : null}
+
+              {/* PLAN CHIPS */}
+              <View style={styles.planPicker}>
+                {PLAN_CHOICES.map((p) => (
+                  <TouchableOpacity
+                    key={p}
+                    style={[
+                      styles.planChip,
+                      formData.meal_plan === p && styles.planChipSelected,
+                    ]}
+                    onPress={() => {
+                      const d = PLAN_DEFAULTS[p];
+                      setFormData({
+                        ...formData,
+                        meal_plan: p,
+                        meal_swipes: d.meal_swipes,
+                        flex_dollars: d.flex_dollars,
+                      });
+                    }}
+                  >
+                    <Text
+                      style={[
+                        styles.planChipTxt,
+                        formData.meal_plan === p && { color: "white" },
+                      ]}
+                    >
+                      {p}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+
+              {/* ONLY TWO FIELDS */}
+              <TextInput
+                style={styles.input}
+                placeholder="Total Swipes"
+                keyboardType="numeric"
+                value={String(formData.meal_swipes)}
+                onChangeText={(val) =>
+                  setFormData({
+                    ...formData,
+                    meal_swipes: Number(val) || 0,
+                  })
+                }
+              />
+              <TextInput
+                style={styles.input}
+                placeholder="Total Flex $"
+                keyboardType="numeric"
+                value={String(formData.flex_dollars)}
+                onChangeText={(val) =>
+                  setFormData({
+                    ...formData,
+                    flex_dollars: Number(val) || 0,
+                  })
+                }
+              />
+
+              {formError ? (
+                <Text style={styles.errorText}>{formError}</Text>
+              ) : null}
               <View style={styles.modalActions}>
-                <TouchableOpacity style={styles.cancelBtn} onPress={() => setEditModalVisible(false)}>
+                <TouchableOpacity
+                  style={styles.cancelBtn}
+                  onPress={() => setEditModal(false)}
+                >
                   <Text style={styles.cancelTxt}>Cancel</Text>
                 </TouchableOpacity>
-                <TouchableOpacity style={styles.confirmBtn} onPress={handleUpdate}>
+                <TouchableOpacity
+                  style={styles.confirmBtn}
+                  onPress={handleUpdate}
+                >
                   <Text style={styles.confirmTxt}>Update</Text>
                 </TouchableOpacity>
               </View>
@@ -281,5 +534,5 @@ export default function Students() {
         </View>
       </Modal>
     </View>
-);
+  );
 }

@@ -361,7 +361,6 @@ export default function ChickfilAScreen() {
         sauceCount += cItem.quantity;
       }
     }
-    // Example sauce surcharge: first 2 free, then $0.25 each
     let surcharge = 0;
     if (sauceCount > 2) {
       surcharge = (sauceCount - 2) * 0.25;
@@ -949,6 +948,7 @@ function PaymentPrompt({
 
   const mealSwipesDisabled = totalNum > 9.27;
 
+
   const handleClose = () => {
     setShowSuccess(false);
     setSelectedMethod(null);
@@ -1028,6 +1028,12 @@ const handleConfirmPayment = async () => {
   
   // 2) Now that we’ve passed the checks (or if Cash/Card was chosen):
   //    INSERT the transaction record into /transaction/
+  const chargeAmount = selectedMethod === "Meal Swipes"
+  ? 0.00
+  : totalNum;
+
+
+
   const transactionData = {
     username: username,
     transaction_date: new Date().toISOString(),
@@ -1035,7 +1041,7 @@ const handleConfirmPayment = async () => {
     transaction_id: uuid.v4(),
     is_successful: true,
     Location: "Chick-fil-A",
-    Total_Amount: totalNum,
+    Total_Amount: chargeAmount,
     MNumber: mnumber,
     first_name: first_name,
   };

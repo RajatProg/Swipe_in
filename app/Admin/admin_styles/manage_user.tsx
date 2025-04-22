@@ -40,19 +40,25 @@ export const styles = StyleSheet.create({
   },
   searchContainer: {
     flex: 1,
+    position: 'relative',      // to allow absolutely positioned icon
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#F0F0F0',
+    backgroundColor: '#f0f0f0',
     borderRadius: 4,
-    paddingHorizontal: 8,
     marginRight: 8,
-  },
-  searchIcon: {
-    marginRight: 6,
   },
   searchInput: {
     flex: 1,
     height: 36,
+    paddingHorizontal: 12,
+    paddingRight: 40,          // leave room for the icon
+  },
+  searchIcon: {
+    position: 'absolute',
+    right: 12,
+    // vertically center:
+    top: '50%',
+    transform: [{ translateY: -10 }],
   },
   addBtn: {
     flexDirection: 'row',
@@ -184,4 +190,58 @@ export const styles = StyleSheet.create({
     marginBottom: 10,
     textAlign: 'center',
   },
+
+  planPicker: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    marginTop: 8,
+    marginBottom: 12,
+  },
+
+  planChip: {
+    paddingVertical: 6,
+    paddingHorizontal: 14,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: '#666',
+    backgroundColor: '#fff',
+    marginRight: 8,
+    marginBottom: 8,
+  },
+
+  planChipSelected: {
+    backgroundColor: '#2b6cb0',      // primary blue
+    borderColor:     '#2b6cb0',
+  },
+
+  planChipTxt: {
+    fontSize: 13,
+    color: '#333',
+    textTransform: 'capitalize',
+  },
+
+  planColumn: {
+    flex: 1,                
+    textTransform: 'capitalize', 
+    paddingHorizontal: 4,     
+  },
+  suggestionsContainer: {
+    backgroundColor: '#fff',
+    borderWidth: 1,
+    borderColor: '#ccc',
+    maxHeight: 150,
+    marginHorizontal: 12,
+  },
+  suggestionItem: {
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#eee',
+  },
+  suggestionText: {
+    fontSize: 14,
+    color: '#333',
+  },
 });
+
+

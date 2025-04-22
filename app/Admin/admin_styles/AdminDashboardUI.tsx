@@ -1,58 +1,39 @@
-import { StyleSheet } from 'react-native';
+// admin_styles/AdminDashboardUI.ts
+import { StyleSheet } from "react-native";
 
 export const styles = StyleSheet.create({
   container: {
     flex: 1,
-    flexDirection: 'row',
-    backgroundColor: '#F5F5F5',
+    padding: 16,
+    backgroundColor: "#F4F4F4",
   },
-
-  sidebar: {
-    width: 250,
-    backgroundColor: '#1e1e2f',
-    paddingTop: 30,
-  },
-
-  mainContent: {
-    flex: 1,
-    backgroundColor: '#F5F5F5',
-    padding: 20,
-  },
-
   heading: {
-    color: '#333',
-    fontSize: 28,
-    fontWeight: 'bold',
-    marginBottom: 20,
+    fontSize: 24,
+    fontWeight: "bold",
+    marginBottom: 24,
   },
-
   cardsContainer: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'space-between',
-    marginBottom: 20,
+    flexDirection: "row",
+    flexWrap: "wrap",
+    justifyContent: "space-between",
   },
-
   card: {
-    width: '48%',
-    height: 100,
-    backgroundColor: '#1f2a44', // 💙 Navy-inspired blue
-    borderRadius: 12,
-    padding: 15,
-    marginBottom: 15,
-    justifyContent: 'center',
-
-    // Optional depth effect
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
+    backgroundColor: "#1C2541",
+    borderRadius: 8,
+    padding: 16,
+    width: "48%",
+    marginBottom: 16,
+    alignItems: "center",
   },
-
+  cardCount: {
+    fontSize: 32,
+    color: "#FFFFFF",
+    fontWeight: "bold",
+    marginBottom: 8,
+  },
   cardText: {
-    color: '#fff', // White text for contrast
     fontSize: 18,
-    fontWeight: 'bold',
+    color: "#FFFFFF",
+    textAlign: "center",
   },
 });

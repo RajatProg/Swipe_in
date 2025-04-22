@@ -195,7 +195,7 @@ export default function DiningMenuScreen() {
       try {
         setLoading(true);
         setError(null);
-        const response = await fetch("http://127.0.0.1:8081/Dinig_Menu/");
+        const response = await fetch("http://127.0.0.1:8081/Dining_Menu/");
         if (!response.ok) {
           throw new Error(`HTTP error: ${response.status}`);
         }

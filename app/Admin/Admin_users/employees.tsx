@@ -165,10 +165,7 @@ export default function Employees() {
     <View style={styles.container}>
       <View style={styles.headerContainer}>
         <Text style={styles.pageTitle}>Manage Employees</Text>
-        <TouchableOpacity onPress={() => router.push('Admin' as never)} style={styles.backButton}>
-          <Ionicons name="arrow-back" size={16} color="white" />
-          <Text style={styles.backText}>Admin</Text>
-        </TouchableOpacity>
+        
       </View>
 
       <View style={styles.topBar}>

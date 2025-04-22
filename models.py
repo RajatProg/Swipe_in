@@ -34,6 +34,7 @@ class Meals(Base):
     username = Column(String(50), primary_key=True)
     first_name = Column(String(50), nullable=False)
     last_name = Column(String(50), nullable=False)
+    email = Column(String(100), unique=True, nullable=False)
     meal_plan = Column(String(50))
     meal_swipes = Column(Integer)
     flex_dollars = Column(Float)
@@ -64,7 +65,7 @@ class Menu(Base):
     item_description = Column(String(255))
     calories = Column(Integer)
     price = Column(Float)
-    category_id = Column(Integer, ForeignKey('categories.category_id'), nullable=False)
+    category_id = Column(Integer, ForeignKey('categories.category_id'))
 
     category = relationship("Categories", back_populates="menus")
 
@@ -102,7 +103,7 @@ class Dining_Menu(Base):
     diet = Column(String(50))
     date = Column(DateTime, nullable=False)
     calories = Column(Integer)
-    category_id = Column(Integer, ForeignKey('Dining_categories.category_id'), nullable=False)
+    category_id = Column(Integer, ForeignKey('Dining_categories.category_id'))
 
     dining_category = relationship("Dining_Categories", back_populates="dining_menus")
 
@@ -112,7 +113,7 @@ class Dining_Categories(Base):
 
     category_id = Column(Integer, primary_key=True, autoincrement=True)
     category_name = Column(String(100))
-    main_category_id = Column(Integer, ForeignKey('Dining_categories_main.main_category_id'), nullable=False)
+    main_category_id = Column(Integer, ForeignKey('Dining_categories_main.main_category_id'))
 
     dining_categories_main = relationship("Dining_Categories_Main", back_populates="dining_categories")
     dining_menus = relationship("Dining_Menu", back_populates="dining_category")
