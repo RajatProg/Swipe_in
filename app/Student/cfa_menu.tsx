@@ -1,3 +1,4 @@
+// screens/MenuItemsScreen.tsx
 import React, { useState, useEffect } from "react";
 import {
   View,
@@ -6,11 +7,12 @@ import {
   TouchableOpacity,
   Image,
   ActivityIndicator,
-  
   StyleSheet,
-  
+  TextInput,
+  KeyboardAvoidingView,
+  Platform,
+  Pressable,
 } from "react-native";
-import { useNavigation, useRoute } from "@react-navigation/native";
 import { cfaImages } from "../styles/cfa_images";
 
 type MenuAPIItem = {
@@ -54,273 +56,255 @@ const categories = [
 
 const defaultImage = require("../../assets/images/swipee.jpg");
 
-const useHover = () => {
-  const [isHovered, setHovered] = useState(false);
-  const hoverProps = {
-    onMouseEnter: () => setHovered(true),
-    onMouseLeave: () => setHovered(false),
-  };
-  return { hoverProps, isHovered };
-};
-
-
-//
-type CategorySectionProps = {
-  cat: string;
-  itemsForCat: MenuItem[];
-  expandedCategory: string | null;
-  toggleCategory: (cat: string) => void;
-};
-
-function CategorySection({
-  cat,
-  itemsForCat,
-  expandedCategory,
-  toggleCategory,
-}: CategorySectionProps) {
-  const { hoverProps, isHovered } = useHover();
-  const underlineStyle =
-    expandedCategory === cat || isHovered ? localStyles.categoryHeaderActive : null;
-  
-  return (
-    <View style={localStyles.categorySection}>
-      <TouchableOpacity onPress={() => toggleCategory(cat)} {...hoverProps}>
-        <Text style={[localStyles.categoryHeader, underlineStyle]}>{cat}</Text>
-      </TouchableOpacity>
-      {expandedCategory === cat && (
-        <View style={localStyles.categoryItemsGrid}>
-          {itemsForCat.map((item) => (
-            <TouchableOpacity key={item.id} style={localStyles.card}>
-              <Image source={item.image} style={localStyles.itemImage} resizeMode="contain" />
-              <View style={localStyles.textContainer}>
-                <Text style={localStyles.itemName}>{item.name}</Text>
-                <Text style={localStyles.calories}>{item.calories} Cal</Text>
-              </View>
-              <View style={localStyles.bottomRow}>
-                <Text style={localStyles.price}>{item.price}</Text>
-              </View>
-            </TouchableOpacity>
-          ))}
-        </View>
-      )}
-    </View>
-  );
-}
-
 export default function MenuItemsScreen() {
-  const navigation = useNavigation();
-  const route = useRoute();
-
-  const [menuData, setMenuData] = useState<MenuItem[]>([]);
-  const [loading, setLoading] = useState<boolean>(false);
-  const [error, setError] = useState<string | null>(null);
-
+  const [menuData, setMenuData]                 = useState<MenuItem[]>([]);
+  const [loading, setLoading]                   = useState(false);
+  const [error, setError]                       = useState<string | null>(null);
   const [expandedCategory, setExpandedCategory] = useState<string | null>(null);
+  const [selectedIds, setSelectedIds]           = useState<Set<number>>(new Set());
+  const [target, setTarget]                     = useState<number | null>(null);
 
   useEffect(() => {
-    const fetchMenuData = async () => {
+    (async () => {
+      setLoading(true);
+      setError(null);
       try {
-        setLoading(true);
-        setError(null);
-        const response = await fetch("http://127.0.0.1:8081/CFA_Menu/");
-        if (!response.ok) {
-          throw new Error(`HTTP error: ${response.status}`);
-        }
-        const data: MenuAPIItem[] = await response.json();
-        const mapped = data.map((item) => {
-          const priceString = `$${item.price.toFixed(2)}`;
-          const catLabel = categoryMap[item.category_id] || "Additional Items";
-          const foundImage = cfaImages[item.item_title] || defaultImage;
-          return {
-            id: item.menu_id,
-            name: item.item_title,
-            description: item.item_description,
-            calories: item.calories,
-            price: priceString,
-            category: catLabel,
-            image: foundImage,
-          };
-        });
-        setMenuData(mapped);
-      } catch (err: any) {
-        setError(err.message || "Error fetching menu data");
+        const res = await fetch("http://127.0.0.1:8081/CFA_Menu/");
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const data: MenuAPIItem[] = await res.json();
+        setMenuData(
+          data.map(i => ({
+            id: i.menu_id,
+            name: i.item_title,
+            description: i.item_description,
+            calories: i.calories,
+            price: `$${i.price.toFixed(2)}`,
+            category: categoryMap[i.category_id] || "Additional Items",
+            image: cfaImages[i.item_title] || defaultImage,
+          }))
+        );
+      } catch (e: any) {
+        setError(e.message);
       } finally {
         setLoading(false);
       }
-    };
-    fetchMenuData();
+    })();
   }, []);
 
-  const toggleCategory = (cat: string) => {
-    setExpandedCategory((prev) => (prev === cat ? null : cat));
+  const toggleCategory = (cat: string) =>
+    setExpandedCategory(c => (c === cat ? null : cat));
+
+  const toggleSelect = (id: number) => {
+    setSelectedIds(s => {
+      const next = new Set(s);
+      next.has(id) ? next.delete(id) : next.add(id);
+      return next;
+    });
   };
 
+  const totalCalories = [...selectedIds].reduce((sum, id) => {
+    const itm = menuData.find(i => i.id === id);
+    return sum + (itm?.calories || 0);
+  }, 0);
+
+  const over = target !== null && totalCalories > target;
 
   return (
-    <View style={localStyles.container}>
-      {/* NAVIGATION BAR */}
-      
-      <View style={centerHeaderStyles.header}>
-        <Image
-          source={require("../../assets/images/CFA_Logo.svg")}
-          style={centerHeaderStyles.logo}
-          resizeMode="contain"
-        />
-      </View>
-      
-      {/* Menu Items Grouped by Category */}
-      <ScrollView
-        style={localStyles.menuContainer}
-        contentContainerStyle={{ paddingBottom: 60, paddingTop: 20 }}
-      >
+    <View style={styles.outerContainer}>
+      {/* LEFT 70% */}
+      <ScrollView style={styles.leftPane} showsVerticalScrollIndicator={false}>
+        <View style={styles.header}>
+          <Image
+            source={require("../../assets/images/CFA_Logo.svg")}
+            style={styles.logo}
+            resizeMode="contain"
+          />
+        </View>
+
         {loading ? (
           <ActivityIndicator size="large" color="#0000ff" />
         ) : error ? (
-          <Text style={{ color: "red", padding: 10 }}>{error}</Text>
+          <Text style={styles.error}>{error}</Text>
         ) : (
-          categories.map((cat) => {
-            const itemsForCat = menuData.filter((item) => item.category === cat);
-            if (itemsForCat.length === 0) return null;
+          categories.map(cat => {
+            const items = menuData.filter(i => i.category === cat);
+            if (!items.length) return null;
             return (
-              <CategorySection
-                key={cat}
-                cat={cat}
-                itemsForCat={itemsForCat}
-                expandedCategory={expandedCategory}
-                toggleCategory={toggleCategory}
-              />
+              <View key={cat} style={styles.categorySection}>
+                <TouchableOpacity
+                  style={styles.categoryHeaderContainer}
+                  onPress={() => toggleCategory(cat)}
+                >
+                  <Text style={styles.categoryHeader}>{cat}</Text>
+                  <Text style={styles.toggleIcon}>
+                    {expandedCategory === cat ? "–" : "+"}
+                  </Text>
+                </TouchableOpacity>
+                {expandedCategory === cat && (
+                  <View style={styles.grid}>
+                    {items.map(item => {
+                      const sel = selectedIds.has(item.id);
+                      return (
+                        <Pressable
+  key={item.id}
+  onPress={() => toggleSelect(item.id)}
+  style={({ hovered, pressed }) => [
+    styles.card,
+    sel && styles.cardSelected,
+    hovered && styles.cardHover,    // ← new hover highlight
+    pressed && { opacity: 0.6 },    // ← same as your old pressed feedback
+  ]}
+>
+                          <Image
+                            source={item.image}
+                            style={styles.cardImage}
+                            resizeMode="cover"
+                          />
+                          <View style={styles.cardText}>
+                            <Text style={styles.cardName}>{item.name}</Text>
+                            <Text style={styles.cardCalories}>
+                              {item.calories} kcal
+                            </Text>
+                          </View>
+                          <Text style={styles.cardPrice}>{item.price}</Text>
+                        </Pressable>
+                      );
+                    })}
+                  </View>
+                )}
+              </View>
             );
           })
         )}
       </ScrollView>
+
+      {/* RIGHT 30% */}
+      <KeyboardAvoidingView
+        style={styles.rightPane}
+        behavior={Platform.OS === "ios" ? "padding" : undefined}
+      >
+        <Text style={styles.calcHeader}>Calorie Calculator</Text>
+        <Text style={styles.label}>Enter your goal:</Text>
+        <TextInput
+          style={styles.input}
+          placeholder="e.g. 800"
+          keyboardType="number-pad"
+          value={target !== null ? String(target) : ""}
+          onChangeText={t => setTarget(t ? parseInt(t, 10) : null)}
+        />
+        <View style={styles.summary}>
+          <Text style={styles.summaryText}>Total: {totalCalories} kcal</Text>
+          {target !== null && (
+            <Text style={[styles.summaryText, over && styles.overWarning]}>
+              {over
+                ? "⚠️ Over your goal!"
+                : `✅ ${target - totalCalories} kcal left`}
+            </Text>
+          )}
+        </View>
+      </KeyboardAvoidingView>
     </View>
   );
 }
 
-//
-// Centered header styles
-//
-const centerHeaderStyles = StyleSheet.create({
-  header: {
-    alignItems: "center",
-    justifyContent: "center",
-    marginTop: 20,
-    marginBottom: 20,
-  },
-  logo: {
-    width: "100%",
-    height: 120,
-  },
-});
+const styles = StyleSheet.create({
+  outerContainer: { flex: 1, flexDirection: "row" },
 
-//
-// Local styles used in this CFA screen
-//
-const localStyles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: "white",
-  },
-  // Navigation Bar
-  navbar: {
+  // LEFT 70%
+  leftPane: { flex: 0.8, backgroundColor: "#fff" },
+  header: { alignItems: "center", marginVertical: 35 },
+  logo: { width: "100%", height: 100 },
+  error: { color: "red", padding: 16 },
+
+  categorySection: { marginBottom: 34 },
+  categoryHeaderContainer: {
     flexDirection: "row",
-    justifyContent: "space-between",
+    justifyContent: "center",
     alignItems: "center",
-    flexWrap: "wrap",
-  },
-  navbarLogo: {
-    width: 100,
-    height: 80,
-    marginLeft: 40,
-    marginTop: 20,
-  },
-  navLinks: {
-    flexDirection: "row",
-    marginRight: 40,
-  },
-  navItem: {
-    marginHorizontal: 40,
-  },
-  navText: {
-    color: "black",
-    fontWeight: "bold",
-    fontSize: 16,
-    marginHorizontal: 10,
-  },
-  // Underline style for navlinks when active or hovered
-  navTextActive: {
-    borderBottomWidth: 5,
-    borderBottomColor: "rgb(198, 2, 2)",
-    paddingBottom: 2,
-    borderRadius: 5,
-  },
-  // Menu Container
-  menuContainer: {
-    flex: 1,
-    backgroundColor: "#fff",
-    paddingHorizontal: 30,
-  },
-  categorySection: {
-    marginBottom: 30,
   },
   categoryHeader: {
     fontSize: 22,
     fontWeight: "bold",
-    color: "#1f2a44",
-    textAlign: "center",
-    marginVertical: 10,
+    marginRight: 8,
+    marginBottom: 18,
   },
-  categoryHeaderActive: {
-    borderBottomWidth: 9,
-    borderBottomColor: "red",   
-    padding: 4,
-    borderRadius: 20,
-    backgroundColor: "#f5f5f5",
-    marginHorizontal: 690,
-    
-  },
-  categoryItemsGrid: {
+  toggleIcon: { fontSize: 22, color: "red",marginBottom: 18 },
+
+  grid: {
     flexDirection: "row",
     flexWrap: "wrap",
+    justifyContent: "space-between",
+    marginTop: 12,
+    paddingHorizontal: 10,
+  },
+  card: {
+    width: "16%",          // four across
+    backgroundColor: "#fafafa",
+    borderRadius: 22,
+    marginBottom: 16,
+    overflow: "hidden",
+    borderWidth: 3,
+    borderColor: "transparent",
+    marginHorizontal: 4.5,
+    marginRight: 30,
+  },
+  cardSelected: {
+    borderColor: "#c41200",
+    backgroundColor: "#fff0f0",
+  },
+  cardImage: {
+    width: "86%",
+    height: 190,
+    borderRadius: 20,     // taller, like before
+  },
+  cardText: { padding: 8, alignItems: "center" },
+  cardName: { fontSize: 15, fontWeight: "600", textAlign: "center" },
+  cardCalories: { marginTop: 4, color: "#666" },
+  cardPrice: {
+    padding: 8,
+    fontSize: 14,
+    fontWeight: "700",
+    color: "#c41200",
+    textAlign: "center",
+  },
+
+  // RIGHT 30%
+  rightPane: {
+    flex: 0.2,
+    backgroundColor: "#f5f5f5",
+    padding: 20,
+    borderLeftWidth: 1,
+    borderLeftColor: "brown",
+    borderTopLeftRadius: 200,
+    borderBottomLeftRadius: 200,
     justifyContent: "center",
   },
-  // Card styles: 4 items per row
-  card: {
-    width: "23%",
-    backgroundColor: "#fff",
-    borderRadius: 19,
-    margin: 14,
-    elevation: 3,
-    alignItems: "center",
-    paddingVertical: 10,
+  calcHeader: {
+    fontSize: 24,
+    fontWeight: "bold",
+    marginBottom: 38,
+    textAlign: "center",
+    color: "red",
   },
-  itemImage: {
-    width: "80%",
-    height: 190,
+  label: { fontSize: 16, marginBottom: 8,  },
+  input: {
+    borderWidth: 4,
+    borderColor: "#aaa",
     borderRadius: 20,
-  },
-  textContainer: {
-    marginTop: 10,
-    alignItems: "center",
-  },
-  itemName: {
+    padding: 10,
+    backgroundColor: "#fff",
+    marginBottom: 60,
     fontSize: 16,
-    fontWeight: "600",
-    color: "#000",
   },
-  calories: {
-    fontSize: 14,
-    color: "#666",
-    marginTop: 4,
-  },
-  bottomRow: {
-    marginTop: 8,
-  },
-  price: {
-    fontSize: 14,
+  summary: { marginTop: 5 },
+  summaryText: { fontSize: 16, marginVertical: 6 },
+  overWarning: {
     color: "#c41200",
     fontWeight: "700",
+    textAlign: "center",
+  },
+  cardHover: {
+    borderColor: "#c41200",
+    backgroundColor: "#fff0f0",
   },
 });
-
-export { MenuItemsScreen };

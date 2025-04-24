@@ -1,15 +1,16 @@
+// screens/DiningMenuScreen.tsx
 import React, { useState, useEffect } from "react";
 import {
   View,
   Text,
   ScrollView,
-  TouchableOpacity,
+  TextInput,
   Image,
   ActivityIndicator,
-  TextInput,
   Platform,
   StyleSheet,
-  LayoutChangeEvent,
+  KeyboardAvoidingView,
+  Pressable,
 } from "react-native";
 import DateTimePicker from "@react-native-community/datetimepicker";
 import { useNavigation, useRoute } from "@react-navigation/native";
@@ -52,405 +53,414 @@ const useHover = () => {
   return { hoverProps, isHovered };
 };
 
-//
-// NavLink Component – for the top navigation bar.
-// Applies an underline when hovered (on web) or when active.
-//
-
-//
-// MainCategory Component – for Breakfast, Lunch, Dinner with hover + selected underline.
-//
+// MainCategory tab component
 type MainCategoryProps = {
   category: string;
   isSelected: boolean;
   onSelect: () => void;
 };
-
 function MainCategory({ category, isSelected, onSelect }: MainCategoryProps) {
   const { hoverProps, isHovered } = useHover();
-  // If hovered or selected, apply the thick underline style
-  const underlineStyle = (isHovered || isSelected)
-    ? styles.categoryButtonTextSelected
-    : null;
+  const underlineStyle =
+    isHovered || isSelected ? styles.categoryButtonTextSelected : null;
 
   return (
-    <TouchableOpacity
-      style={styles.categoryButton}
-      onPress={onSelect}
-      {...hoverProps}
-    >
+    <Pressable onPress={onSelect} style={styles.categoryButton} {...hoverProps}>
       <Text style={[styles.categoryButtonText, underlineStyle]}>
         {category.toUpperCase()}
       </Text>
-    </TouchableOpacity>
+    </Pressable>
   );
 }
 
-//
-// Component: CategorySection for grouping dining items by subcategory.
-//
+// CategorySection for subcategory grouping
 type CategorySectionProps = {
   cat: string;
   itemsForCat: DiningItem[];
   expandedCategory: string | null;
   toggleCategory: (cat: string) => void;
+  selectedIds: Set<number>;
+  toggleSelect: (id: number) => void;
 };
-
 function CategorySection({
   cat,
   itemsForCat,
   expandedCategory,
   toggleCategory,
+  selectedIds,
+  toggleSelect,
 }: CategorySectionProps) {
-  const { hoverProps, isHovered } = useHover();
+  const { hoverProps } = useHover();
   const underlineStyle =
-    expandedCategory === cat || isHovered
-      ? localStyles.categoryHeaderActive
-      : null;
+    expandedCategory === cat ? localStyles.categoryHeaderActive : null;
 
   return (
     <View style={localStyles.categorySection}>
-      <TouchableOpacity onPress={() => toggleCategory(cat)} {...hoverProps}>
+      <Pressable onPress={() => toggleCategory(cat)} {...hoverProps}>
         <Text style={[localStyles.categoryHeader, underlineStyle]}>{cat}</Text>
-      </TouchableOpacity>
+      </Pressable>
       {expandedCategory === cat && (
         <View style={localStyles.categoryItemsGrid}>
-          {itemsForCat.map((item) => (
-            <TouchableOpacity key={item.id} style={localStyles.card}>
-              <View style={localStyles.textContainer}>
-                <Text style={localStyles.itemName}>{item.title}</Text>
-                {item.diet === "Vegan" ? ( <Text style={localStyles.diet1}>{item.diet}</Text> ) : (<Text style={localStyles.diet}>{item.diet}</Text>) }
-                <Text style={localStyles.portion}>{item.portion}</Text>
-                <Text style={localStyles.calories}>{item.calories} Cal</Text>
-              </View>
-            </TouchableOpacity>
-          ))}
+          {itemsForCat.map((item) => {
+            const sel = selectedIds.has(item.id);
+            return (
+              <Pressable
+                key={item.id}
+                onPress={() => toggleSelect(item.id)}
+                style={({ hovered, pressed }) => [
+                  localStyles.card,
+                  sel && localStyles.cardSelected,
+                  hovered && localStyles.cardHover,
+                  pressed && { opacity: 0.6 },
+                ]}
+              >
+                <View style={localStyles.textContainer}>
+                  <Text style={localStyles.itemName}>{item.title}</Text>
+                  <Text
+                    style={
+                      item.diet === "Vegan"
+                        ? localStyles.diet1
+                        : localStyles.diet
+                    }
+                  >
+                    {item.diet}
+                  </Text>
+                  <Text style={localStyles.portion}>{item.portion}</Text>
+                  <Text style={localStyles.calories}>{item.calories} Cal</Text>
+                </View>
+              </Pressable>
+            );
+          })}
         </View>
       )}
     </View>
   );
 }
 
-//
-// Helper Functions: Date formatting and local noon date creation
-//
+// Date helper functions
 function formatDateToYMD(d: Date): string {
   const y = d.getFullYear();
   const m = String(d.getMonth() + 1).padStart(2, "0");
   const day = String(d.getDate()).padStart(2, "0");
   return `${y}-${m}-${day}`;
 }
-
 function createLocalNoonDate(dateString: string): Date {
   const [year, month, day] = dateString.split("-").map(Number);
   return new Date(year, month - 1, day, 12, 0, 0);
 }
-
 function createLocalNoonDateForToday(): Date {
   const now = new Date();
   return new Date(now.getFullYear(), now.getMonth(), now.getDate(), 12, 0, 0);
 }
 
-//
-// Main Dining Screen
-//
 export default function DiningMenuScreen() {
-  const navigation = useNavigation();
-  const route = useRoute();
   const [menuData, setMenuData] = useState<DiningItem[]>([]);
-  const [loading, setLoading] = useState<boolean>(false);
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const mainCategories = ["Breakfast", "Lunch", "Dinner"];
-  const [selectedCategory, setSelectedCategory] = useState<string>("Breakfast");
-
-
+  const [selectedCategory, setSelectedCategory] = useState("Breakfast");
   const [expandedCategory, setExpandedCategory] = useState<string | null>(null);
+
+  // Calorie calculator state
+  const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
+  const [target, setTarget] = useState<number | null>(null);
 
   // Date picker state
   const [selectedDate, setSelectedDate] = useState<Date>(
     createLocalNoonDateForToday()
   );
-  const [showDatePicker, setShowDatePicker] = useState<boolean>(false);
+  const [showDatePicker, setShowDatePicker] = useState(false);
 
-  // Fetch dining data from the API
+  // Fetch data
   useEffect(() => {
-    const fetchDiningMenu = async () => {
+    (async () => {
+      setLoading(true);
+      setError(null);
       try {
-        setLoading(true);
-        setError(null);
         const response = await fetch("http://127.0.0.1:8081/Dining_Menu/");
-        if (!response.ok) {
-          throw new Error(`HTTP error: ${response.status}`);
-        }
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
         const data: DiningAPIItem[] = await response.json();
-        const mapped = data.map((item) => {
-          const dateStr = item.date.includes("T")
-            ? item.date.slice(0, 10)
-            : item.date;
-          return {
-            id: item.menu_id,
-            title: item.item_title,
-            detail: item.item_detail,
-            portion: item.portion,
-            diet: item.diet,
-            date: dateStr,
-            calories: item.calories,
-            mainCategory: item.main_category,
-            subcategory: item.subcategory,
-          };
-        });
-        setMenuData(mapped);
-      } catch (err: any) {
-        setError(err.message || "Error fetching dining menu");
+        setMenuData(
+          data.map((item) => {
+            const dateStr = item.date.includes("T")
+              ? item.date.slice(0, 10)
+              : item.date;
+            return {
+              id: item.menu_id,
+              title: item.item_title,
+              detail: item.item_detail,
+              portion: item.portion,
+              diet: item.diet,
+              date: dateStr,
+              calories: item.calories,
+              mainCategory: item.main_category,
+              subcategory: item.subcategory,
+            };
+          })
+        );
+      } catch (e: any) {
+        setError(e.message);
       } finally {
         setLoading(false);
       }
-    };
-    fetchDiningMenu();
+    })();
   }, []);
 
- 
-  const handleWebDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const forcedNoon = createLocalNoonDate(e.target.value);
-    setSelectedDate(forcedNoon);
-  };
-
-  const onDateChange = (event: any, date?: Date) => {
-    if (Platform.OS !== "web") setShowDatePicker(false);
-    if (date) {
-      const forcedNoon = new Date(
-        date.getFullYear(),
-        date.getMonth(),
-        date.getDate(),
-        12,
-        0,
-        0
-      );
-      setSelectedDate(forcedNoon);
-    }
-  };
+  // Filter & group
   const filterDateStr = formatDateToYMD(selectedDate);
-  const filteredItems = menuData.filter((item) => {
-    const catMatch = item.mainCategory === selectedCategory;
-    const dateMatch = item.date === filterDateStr;
-    return catMatch && dateMatch;
-  });
-
-
-  const groupedItems = filteredItems.reduce((acc, item) => {
-    if (!acc[item.subcategory]) {
-      acc[item.subcategory] = [];
-    }
-    acc[item.subcategory].push(item);
+  const filtered = menuData.filter(
+    (i) => i.mainCategory === selectedCategory && i.date === filterDateStr
+  );
+  const groupedItems = filtered.reduce((acc, i) => {
+    (acc[i.subcategory] ||= []).push(i);
     return acc;
   }, {} as Record<string, DiningItem[]>);
 
-  // Toggle the expanded subcategory group
-  const toggleCategory = (cat: string) => {
+  // Toggle subcategory & selection
+  const toggleCategory = (cat: string) =>
     setExpandedCategory((prev) => (prev === cat ? null : cat));
+  const toggleSelect = (id: number) =>
+    setSelectedIds((s) => {
+      const nxt = new Set(s);
+      nxt.has(id) ? nxt.delete(id) : nxt.add(id);
+      return nxt;
+    });
+
+  // Calorie total
+  const totalCalories = [...selectedIds].reduce(
+    (sum, id) => sum + (menuData.find((i) => i.id === id)?.calories || 0),
+    0
+  );
+  const over = target !== null && totalCalories > target;
+
+  // Date handlers
+  const handleWebDateChange = (e: any) =>
+    setSelectedDate(createLocalNoonDate(e.target.value));
+  const onDateChange = (_: any, date?: Date) => {
+    if (Platform.OS !== "web") setShowDatePicker(false);
+    if (date) setSelectedDate(new Date(date.setHours(12, 0, 0)));
   };
 
   return (
-    <View style={styles.container}>
-      
+    <View style={styles.outerContainer}>
+      {/* LEFT 70% */}
+      <ScrollView showsVerticalScrollIndicator={false}
+        style={styles.leftPane}
+        contentContainerStyle={{ padding: 20 }}
+      >
+        {/* Header */}
+        <View style={centerHeaderStyles.header}>
+          <Text style={styles.mainHeader}>Mesquite Dining Hall</Text>
+        </View>
 
-      {/* CENTERED HEADER */}
-      <View style={centerHeaderStyles.header}>
-        <Text style={{ fontSize: 40, marginTop:35 ,fontWeight: "bold" , color: "rgb(198, 2, 2)"}}>
-          Mesquite Dining Hall
-        </Text>
-      </View>
+        {/* Date Picker */}
+        <View style={styles.datePickerContainer}>
+          <Text style={styles.dateLabel}>Date</Text>
+          {Platform.OS === "web" ? (
+            <input
+              type="date"
+              value={filterDateStr}
+              onChange={handleWebDateChange}
+              style={styles.dateInputWeb}
+            />
+          ) : (
+            <>
+              <Pressable
+                style={styles.dateButton}
+                onPress={() => setShowDatePicker(true)}
+              >
+                <Text style={styles.dateButtonText}>{filterDateStr}</Text>
+              </Pressable>
+              {showDatePicker && (
+                <DateTimePicker
+                  value={selectedDate}
+                  mode="date"
+                  display="calendar"
+                  onChange={onDateChange}
+                />
+              )}
+            </>
+          )}
+        </View>
 
-
-      <View style={styles.datePickerContainer}>
-        <Text style={styles.dateLabel}>Date</Text>
-        {Platform.OS === "web" ? (
-          <input
-            type="date"
-            value={formatDateToYMD(selectedDate)}
-            onChange={handleWebDateChange}
-            style={styles.dateInputWeb}
-          />
-        ) : (
-          <>
-            <TouchableOpacity
-              style={styles.dateButton}
-              onPress={() => setShowDatePicker(true)}
-            >
-              <Text style={styles.dateButtonText}>
-                {formatDateToYMD(selectedDate)}
-              </Text>
-            </TouchableOpacity>
-            {showDatePicker && (
-              <DateTimePicker
-                value={selectedDate}
-                mode="date"
-                display="calendar"
-                onChange={onDateChange}
-              />
-            )}
-          </>
-        )}
-      </View>
-
-    
-      <View style={styles.topCard}>
-        <View style={styles.categoriesRow}>
-          {mainCategories.map((cat) => {
-            const isSelected = selectedCategory === cat;
-            return (
+        {/* Main Category Tabs */}
+        <View style={styles.topCard}>
+          <View style={styles.categoriesRow}>
+            {mainCategories.map((cat) => (
               <MainCategory
                 key={cat}
                 category={cat}
-                isSelected={isSelected}
+                isSelected={selectedCategory === cat}
                 onSelect={() => setSelectedCategory(cat)}
               />
-            );
-          })}
+            ))}
+          </View>
         </View>
-      </View>
 
-
-      <ScrollView
-        style={styles.menuContainer}
-        contentContainerStyle={{ paddingBottom: 60, paddingTop: 20 }}
-      >
+        {/* Subcategories */}
         {loading ? (
-          <ActivityIndicator size="large" color="#0000ff" />
+          <ActivityIndicator size="large" color="#000" />
         ) : error ? (
-          <Text style={{ color: "red", padding: 10 }}>{error}</Text>
+          <Text style={styles.error}>{error}</Text>
         ) : (
-          Object.keys(groupedItems).map((subcat) => (
+          Object.entries(groupedItems).map(([subcat, items]) => (
             <CategorySection
               key={subcat}
               cat={subcat}
-              itemsForCat={groupedItems[subcat]}
+              itemsForCat={items}
               expandedCategory={expandedCategory}
               toggleCategory={toggleCategory}
+              selectedIds={selectedIds}
+              toggleSelect={toggleSelect}
             />
           ))
         )}
       </ScrollView>
+
+      {/* RIGHT 30%: Calorie Calculator */}
+      <KeyboardAvoidingView
+        style={styles.rightPane}
+        behavior={Platform.OS === "ios" ? "padding" : undefined}
+      >
+        <Text style={styles.calcHeader}>Calorie Calculator</Text>
+        <Text style={styles.label}>Enter your goal:</Text>
+        <TextInput
+          style={styles.input}
+          placeholder="e.g. 800"
+          keyboardType="number-pad"
+          value={target !== null ? String(target) : ""}
+          onChangeText={(t) => setTarget(t ? parseInt(t, 10) : null)}
+        />
+        <View style={styles.summary}>
+          <Text style={styles.summaryText}>Total: {totalCalories} kcal</Text>
+          {target !== null && (
+            <Text style={[styles.summaryText, over && styles.overWarning]}>
+              {over
+                ? "⚠️ Over your goal!"
+                : `✅ ${target - totalCalories} kcal left`}
+            </Text>
+          )}
+        </View>
+      </KeyboardAvoidingView>
     </View>
   );
 }
 
-
 const centerHeaderStyles = StyleSheet.create({
   header: {
     alignItems: "center",
-    justifyContent: "center",
-    marginTop: 20,
     marginBottom: 20,
-  },
-  logo: {
-    width: "100%",
-    height: 120,
   },
 });
 
 const styles = StyleSheet.create({
-  container: {
+  outerContainer: {
     flex: 1,
-    backgroundColor: "white",
-  },
-  // Navigation Bar
-  navbar: {
     flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    paddingHorizontal: 16,
-    backgroundColor: "white",
+    backgroundColor: "#fff",
   },
-  navbarLogo: {
-    width: 100,
-    height: 80,
-    marginLeft: 40,
-    marginTop: 20,
+  leftPane: {
+    flex: 0.7,
   },
-  navLinks: {
-    flexDirection: "row",
-  },
-  navItem: {
-    marginHorizontal: 40,
-  },
-  navText: {
-    color: "black",
+  mainHeader: {
+    fontSize: 32,
     fontWeight: "bold",
-    fontSize: 16,
-    marginHorizontal: 10,
-  },
-
-  navTextActive: {
-    borderBottomWidth: 5,
-    borderBottomColor: "rgb(198, 2, 2)",
-    paddingBottom: 2,
-    borderRadius: 5,
+    color: "rgb(198,2,2)",
+    textAlign: "center",
+    marginVertical: 20,
   },
 
   datePickerContainer: {
-    flexDirection: "column",
     alignItems: "center",
-    marginVertical: 15,
+    marginBottom: 20,
   },
   dateLabel: {
     fontSize: 14,
-    color: "#333",
     marginBottom: 4,
   },
   dateInputWeb: {
-    padding: 9,
-    paddingLeft: 12,
-    fontSize: 17,
-    borderWidth: 0.5,
-    borderColor: "#e0e0e0",
-    borderRadius: 15,
-    marginBottom  : 19,
+    padding: 8,
+    fontSize: 16,
+    borderWidth: 1,
+    borderColor: "#ccc",
+    borderRadius: 6,
   },
   dateButton: {
     backgroundColor: "#007AFF",
-    paddingVertical: 8,
-    paddingHorizontal: 12,
+    padding: 8,
     borderRadius: 6,
   },
   dateButtonText: {
     color: "#fff",
-    fontSize: 14,
-    fontWeight: "600",
+    fontSize: 16,
   },
+
   topCard: {
-    marginTop: 10,
+    marginVertical: 16,
   },
   categoriesRow: {
     flexDirection: "row",
-    justifyContent: "space-evenly",
-    marginRight: 60,
-    flexWrap: "wrap",
+    justifyContent: "space-around",
   },
-
   categoryButton: {
-    marginHorizontal: 20,
-    paddingVertical: 7,
-
+    paddingVertical: 8,
+    marginRight: 40
   },
   categoryButtonText: {
-    fontSize: 28,
+    fontSize: 25,
     fontWeight: "bold",
-    color: "black",
-    marginBottom: 59,
   },
   categoryButtonTextSelected: {
-    borderBottomWidth: 5,
-    borderBottomColor: "rgb(198, 2, 2)",
+    borderBottomWidth: 3,
+    borderBottomColor: "rgb(198,2,2)",
     paddingBottom: 2,
-    borderRadius: 5,
   },
-  
-  menuContainer: {
-    flex: 1,
+
+  error: {
+    color: "red",
+    textAlign: "center",
+    marginTop: 20,
+  },
+
+  // RIGHT 30%
+  rightPane: {
+    flex: 0.2,
+    backgroundColor: "#f5f5f5",
+    padding: 20,
+    borderLeftWidth: 1,
+    borderLeftColor: "brown",
+    borderTopLeftRadius: 200,
+    borderBottomLeftRadius: 200,
+    justifyContent: "center",
+  },
+  calcHeader: {
+    fontSize: 24,
+    fontWeight: "bold",
+    marginBottom: 38,
+    textAlign: "center",
+    color: "brown",
+  },
+  label: { fontSize: 16, marginBottom: 8 },
+  input: {
+    borderWidth: 4,
+    borderColor: "#aaa",
+    borderRadius: 20,
+    padding: 10,
     backgroundColor: "#fff",
-    paddingHorizontal: 30,
+    marginBottom: 60,
+    fontSize: 16,
+  },
+  summary: { marginTop: 5 },
+  summaryText: { fontSize: 16, marginVertical: 6 },
+  overWarning: {
+    color: "#c41200",
+    fontWeight: "700",
+    textAlign: "center",
+  },
+  cardHover: {
+    borderColor: "#c41200",
+    backgroundColor: "#fff0f0",
   },
 });
 
@@ -467,11 +477,11 @@ const localStyles = StyleSheet.create({
   },
   categoryHeaderActive: {
     borderBottomWidth: 9,
-    borderBottomColor: "rgb(198, 2, 2)",   
+    borderBottomColor: "brown",
     padding: 4,
     borderRadius: 20,
     backgroundColor: "#f5f5f5",
-    marginHorizontal: 690,
+    marginHorizontal: 550,
   },
   categoryItemsGrid: {
     flexDirection: "row",
@@ -499,25 +509,33 @@ const localStyles = StyleSheet.create({
   calories: {
     fontSize: 14,
     color: "red",
-    fontWeight: '600',
+    fontWeight: "600",
     marginTop: 4,
   },
   diet: {
     fontSize: 14,
     color: "#666",
-    fontWeight: '600',
+    fontWeight: "600",
     marginTop: 4,
   },
   diet1: {
     fontSize: 14,
     color: "green",
     marginTop: 4,
-    fontWeight: '600',
+    fontWeight: "600",
   },
   portion: {
     fontSize: 14,
     color: "#666",
     marginTop: 4,
+  },
+  cardSelected: {
+    borderWidth: 2,
+    borderColor: "rgb(198,2,2)",
+    backgroundColor: "#fff0f0",
+  },
+  cardHover: {
+    backgroundColor: "#fef0f0",
   },
 });
 
