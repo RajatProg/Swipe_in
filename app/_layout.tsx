@@ -1,5 +1,5 @@
-import { Stack } from 'expo-router';
-import { AuthProvider } from './AuthContext';
+import { Stack } from "expo-router";
+import { AuthProvider } from "./AuthContext";
 
 export default function RootLayout() {
   return (
@@ -22,8 +22,8 @@ export default function RootLayout() {
 
         {/* admin hierarchy — note: use "Admin", not "Admin/index" */}
         <Stack.Screen name="Admin" />
-        <Stack.Screen name="Admin/Admin_users/students" />
-        <Stack.Screen name="Admin/Admin_users/employees" />
+        {/* student */}
+        <Stack.Screen name="Student" />
 
         {/* other */}
         <Stack.Screen name="Locations" />

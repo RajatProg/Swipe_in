@@ -30,13 +30,11 @@ export default function Login() {
 
 
   const handleLoginuser = async () => {
-    try {
-
-      
+    try {      
       
       const userRole = await login(username, password);
       if (userRole === 'STUDENT') {
-        navigation.navigate('Profiles/Student' as never);
+        navigation.navigate('Student' as never);
       
       } else {
         window.alert('Please check username or password');

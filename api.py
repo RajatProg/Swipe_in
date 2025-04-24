@@ -6,6 +6,7 @@ import hashlib
 from sqlalchemy import Date, cast, desc
 import uvicorn
 import jwt
+from typing import Literal
 from fastapi import FastAPI, HTTPException, Depends, Query, status, Security
 from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
@@ -75,6 +76,19 @@ class TransactionModel(BaseModel):
     MNumber: str
     first_name: str
 
+class MealsResponseModel(BaseModel):
+    username: str
+    first_name: str
+    last_name: str
+    email: str
+    meal_plan: str
+    meal_swipes: int
+    flex_dollars: float
+
+class PlanUpgradeRequest(BaseModel):
+    meal_plan: Literal["Platinum", "Gold", "Silver", "Bronze"]
+
+
 class StudentRegistration(BaseModel):
     username: str
     first_name: str
@@ -83,6 +97,14 @@ class StudentRegistration(BaseModel):
     meal_plan: str
 
 class TransactionSummary(BaseModel):
+    transaction_date: datetime
+    transaction_mode: str
+    transaction_id: str
+    Total_Amount: float
+    Location: str
+
+
+class StTransactionSummary(BaseModel):
     transaction_date: datetime
     transaction_mode: str
     transaction_id: str
@@ -269,6 +291,8 @@ async def login(user_creds: UserLogin, db: Session = Depends(get_db)):
         "access_token": access_token,
         "token_type": "bearer",
         "firstname": user.first_name,
+        "lastname": user.last_name,
+        "email": user.email,
         "username": user.username,
         "role": user.role
     }
@@ -737,24 +761,6 @@ def delete_user(username: str, db: Session = Depends(get_db)):
     return {"message": f"User {username} and associated swipes record deleted."}
 
 
-@app.put("/users/{username}", response_model=UserResponseModel)
-def update_user(username: str, updated_user: UserBase, db: Session = Depends(get_db)):
-    user = db.query(User).filter(User.username == username).first()
-    if not user:
-        raise HTTPException(status_code=404, detail="User not found")
-    
-    user.first_name = updated_user.first_name
-    user.last_name = updated_user.last_name
-    user.email = updated_user.email
-    user.role = updated_user.role
-    user.password = user.password 
-
-    db.commit()
-    db.refresh(user)
-    return user
-
-
-
 @app.put("/student_users/{username}")
 def update_student(
     username: str,
@@ -846,6 +852,99 @@ def update_student(
     return student
 
 
+@app.put(
+    "/student_users_upgrade/{username}",
+    response_model=MealsResponseModel,
+    summary="Upgrade a student’s meal plan (carry over used swipes, add $100 flex)"
+)
+def upgrade_meal_plan(
+    username: str,
+    req: PlanUpgradeRequest,
+    db: Session = Depends(get_db),
+):
+    # 1) Load student + swipes row
+    student = db.query(Meals).filter(Meals.username == username).first()
+    if not student:
+        raise HTTPException(status_code=404, detail="Student not found")
+
+    swipe = db.query(Swipes).filter(Swipes.username == username).first()
+
+    # 2) Compute used swipes & remaining flex
+    old_total_swipes = student.meal_swipes or 0
+    used_swipes      = 0
+    old_left_flex    = student.flex_dollars or 0.0
+    if swipe:
+        used_swipes   = old_total_swipes - (swipe.meal_swipes_left or 0)
+        old_left_flex = swipe.flex_dollars_left or 0.0
+
+    # 3) New plan defaults
+    PLAN_SWIPES    = {"Platinum": 600, "Gold": 200, "Silver": 150, "Bronze": 75}
+    new_total_swipes = PLAN_SWIPES.get(req.meal_plan)
+    FLEX_TOP_UP      = 100.0
+
+    # 4) Compute new “left” values
+    new_left_swipes = max(new_total_swipes - used_swipes, 0)
+    new_total_flex  = old_left_flex + FLEX_TOP_UP
+    new_left_flex   = new_total_flex
+
+    # 5) Apply to Meals record
+    student.meal_plan   = req.meal_plan
+    student.meal_swipes = new_total_swipes
+    student.flex_dollars= new_total_flex
+
+    # 6) Apply to or create Swipes record
+    if swipe:
+        swipe.meal_swipes       = new_total_swipes
+        swipe.meal_swipes_left  = new_left_swipes
+        swipe.flex_dollars      = new_total_flex
+        swipe.flex_dollars_left = new_left_flex
+    else:
+        new_swipe = Swipes(
+            username           = username,
+            meal_swipes        = new_total_swipes,
+            meal_swipes_left   = new_left_swipes,
+            flex_dollars       = new_total_flex,
+            flex_dollars_left  = new_left_flex,
+        )
+        db.add(new_swipe)
+
+    db.commit()
+    db.refresh(student)
+    return student
+
+@app.get(
+    "/transactions/{username}",
+    response_model=List[StTransactionSummary],
+    summary="Get all transactions for one student",
+)
+def read_transactions_for_user(
+    username: str,
+    db: Session = Depends(get_db)
+):
+
+    txs = (
+        db.query(Transactions)
+          .filter(Transactions.MNumber == username)
+          .order_by(desc(Transactions.transaction_date))
+          .all()
+    )
+    if not txs:
+        raise HTTPException(
+            status_code=404,
+            detail=f"No transactions found for user {username}"
+        )
+
+    return [
+        TransactionSummary(
+            transaction_date=t.transaction_date,
+            transaction_mode=t.transaction_mode,
+            transaction_id=t.transaction_id,
+            Total_Amount=t.Total_Amount,
+            Location=t.Location
+        )
+        for t in txs
+    ]
+
 @app.get( "/student_users_swipes/", response_model=List[StudentWithTxnSummary])
 def read_student_users_swipes(db: Session = Depends(get_db)):
     
@@ -879,7 +978,27 @@ def read_student_users_swipes(db: Session = Depends(get_db)):
     return transactions_by_user
 
 
+@app.get("/swipe_balance/{username}")
+def get_swipe_balance(username: str, db: Session = Depends(get_db)):
+    swipe = db.query(Swipes).filter(Swipes.username == username).first()
+    if not swipe:
+        raise HTTPException(status_code=404, detail="Swipe record not found.")
+    return {
+        "username": swipe.username,
+        "meal_swipes_left": swipe.meal_swipes_left,
+        "flex_dollars_left": swipe.flex_dollars_left,
+    }
 
+@app.get("/meal_plan/{username}")
+def get_meal_plan(username: str, db: Session = Depends(get_db)):
+    meal_plan = db.query(Meals).filter(Meals.username == username).first()
+    if not meal_plan:
+        raise HTTPException(status_code=404, detail="Meal plan not found.")
+    return {
+        "username": meal_plan.username,
+        "meal_plan": meal_plan.meal_plan,
+       
+    }
 
 
 @app.post("/CFA_Menu/", status_code=status.HTTP_201_CREATED)
