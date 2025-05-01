@@ -24,6 +24,7 @@ import {
   Tooltip,
   Legend,
 } from "chart.js";
+import ForecastChart from "./ForecastChart";
 
 ChartJS.register(
   BarElement,
@@ -335,7 +336,13 @@ export default function AdminDashboard() {
               }}
             />
           </View>
+          
+
         </View>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+        <ForecastChart />
+        <ScrollView/>
+      </ScrollView>
       </ScrollView>
     </SafeAreaView>
   );

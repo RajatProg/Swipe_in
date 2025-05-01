@@ -4,11 +4,16 @@ from typing import Optional, List
 import os
 import hashlib
 from zoneinfo import ZoneInfo
+
+import pandas as pd
+from sklearn.preprocessing import MinMaxScaler, RobustScaler
+import numpy as np
 from sqlalchemy import Date, cast, desc
 import uvicorn
 import jwt
 from typing import Literal
 from fastapi import FastAPI, HTTPException, Depends, Query, status, Security
+import requests
 from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import HTTPAuthorizationCredentials
@@ -28,6 +33,11 @@ from models import (
     Categories
 )
 from pydantic import BaseModel, EmailStr
+from datetime import timedelta
+from sklearn.preprocessing import MinMaxScaler
+from tensorflow import keras
+from keras.layers import Dense, LSTM, Dropout, LeakyReLU
+from keras.models import Sequential
 
 
 SECRET_KEY = os.environ.get("SECRET_KEY", "default_secret_key")
@@ -194,6 +204,9 @@ class Config:
     json_encoders = {
         datetime: lambda dt: dt.astimezone(ZoneInfo("America/Chicago")).isoformat()
     }
+
+class Config:
+        orm_mode = True
 
 
 def get_db():
@@ -1155,6 +1168,106 @@ def delete_category(
     )
 
 
+
+@app.get("/predict_transactions/")
+def predict_transactions():
+    # 1) Fetch raw JSON
+    resp = requests.get("http://127.0.0.1:8081/Transactions/")
+    data = resp.json()
+
+    # 2) Load & parse dates WITHOUT specifying format
+    df = pd.DataFrame(data)
+    df["transaction_date"] = pd.to_datetime(
+        df["transaction_date"],
+        format="mixed",
+        errors="raise",            # so truly bad strings still error
+    )
+    if "is_successful" in df.columns:
+        df = df[df["is_successful"] == True]
+
+    # 3) Aggregate to daily spend
+    daily = (
+        df
+        .groupby(df["transaction_date"].dt.date)["Total_Amount"]
+        .sum()
+        .reset_index(name="total_spent")
+    )
+    daily["date"] = pd.to_datetime(daily["transaction_date"])
+    daily = daily[["date", "total_spent"]].sort_values("date").reset_index(drop=True)
+
+    # 4) Add weekday features
+    daily["dow"]     = daily["date"].dt.weekday
+    daily["dow_sin"] = np.sin(2*np.pi * daily["dow"]/7)
+    daily["dow_cos"] = np.cos(2*np.pi * daily["dow"]/7)
+
+    # 5) Scale only on history minus last 7 days
+    H = 7
+    train_df = daily.iloc[:-H]
+    scaler = RobustScaler()
+    train_scaled = scaler.fit_transform(train_df[["total_spent"]])
+    daily.loc[train_df.index, "scaled"] = train_scaled.flatten()
+    hold_idx = daily.index.difference(train_df.index)
+    daily.loc[hold_idx, "scaled"] = scaler.transform(daily.loc[hold_idx, ["total_spent"]]).flatten()
+
+    # 6) Build sequences (7 timesteps, 3 features)
+    SEQ_LEN = 7
+    feats = daily[["scaled", "dow_sin", "dow_cos"]].values
+    X, y = [], []
+    for i in range(len(feats) - SEQ_LEN):
+        X.append(feats[i : i + SEQ_LEN])
+        y.append(feats[i + SEQ_LEN, 0])   # scaled spend
+    X = np.array(X)
+    y = np.array(y)
+
+    # 7) Train/test split on sequences wholly in train_df
+    split_i = len(train_df) - SEQ_LEN
+    X_train, y_train = X[:split_i], y[:split_i]
+
+    # 8) Stacked LSTM with LeakyReLU + sigmoid output
+    model = Sequential([
+        LSTM(128, return_sequences=True, input_shape=(SEQ_LEN, 3), activation="tanh", recurrent_activation="sigmoid"),
+        LeakyReLU(alpha=0.2),
+        Dropout(0.3),
+
+        LSTM(64, return_sequences=True, activation="tanh", recurrent_activation="sigmoid"),
+        LeakyReLU(alpha=0.2),
+        Dropout(0.2),
+
+        LSTM(32, return_sequences=False, activation="tanh", recurrent_activation="sigmoid"),
+        LeakyReLU(alpha=0.2),
+        Dropout(0.2),
+
+        Dense(1, activation="sigmoid")
+    ])
+    model.compile(optimizer="adam", loss="mse")
+    model.fit(X_train, y_train, epochs=20, batch_size=8, verbose=0)
+
+    # 9) Rolling‐forecast next 7 days
+    last_window = feats[-SEQ_LEN:].copy()
+    preds_scaled = []
+    future_dates = []
+    max_date = daily["date"].max()
+
+    for i in range(H):
+        p = model.predict(last_window[np.newaxis, ...])[0, 0]
+        preds_scaled.append(p)
+
+        next_date = max_date + timedelta(days=i+1)
+        dow = next_date.weekday()
+        sin = np.sin(2*np.pi * dow/7)
+        cos = np.cos(2*np.pi * dow/7)
+        future_dates.append(next_date.date().isoformat())
+
+        next_feat = np.array([p, sin, cos])
+        last_window = np.vstack([last_window[1:], next_feat])
+
+    # 10) Inverse‐scale back to dollar amounts
+    dollars = scaler.inverse_transform(np.array(preds_scaled).reshape(-1,1)).flatten()
+
+    return {
+        "dates": future_dates,
+        "predicted_spending": dollars.tolist()
+    }
 
 if __name__ == "__main__":
     uvicorn.run(
