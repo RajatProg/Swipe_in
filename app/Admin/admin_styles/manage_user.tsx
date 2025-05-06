@@ -5,7 +5,7 @@ export const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#fff',
-    padding: 16,
+    padding: 16
   },
 
   headerContainer: {
@@ -141,7 +141,9 @@ export const styles = StyleSheet.create({
     backgroundColor: '#FFF',
     padding: 20,
     borderRadius: 8,
-    width: '80%',
+    width: '40%',
+    height: 'auto',
+ 
   },
   modalText: {
     fontSize: 16,
