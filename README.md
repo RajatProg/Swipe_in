@@ -5,7 +5,7 @@ SwipeIn is a full-stack dining management and analytics platform designed to imp
 The platform supports **three primary roles**:
 
 - Students
-- Dining Employees
+- Employees
 - Administrators
 
 SwipeIn centralizes fragmented dining workflows into a single system, enabling operational transparency, analytics-driven decisions, and improved inventory planning.
